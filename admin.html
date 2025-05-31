@@ -40,6 +40,16 @@
         #login-container button:hover {
             background-color: #0056b3;
         }
+        #logout-button {
+            float: right;
+            font-size: 0.7em;
+            padding: 5px 10px;
+        }
+        #dashboard-logout-button {
+            float: right;
+            font-size: 0.7em;
+            padding: 5px 10px;
+        }
         #login-error {
             color: red;
             margin-bottom: 10px;
@@ -48,6 +58,17 @@
         .hidden {
             display: none !important;
         }
+        .margin-horizontal {
+            margin-left: 10px;
+            margin-right: 10px;
+        }
+        #custom-range-picker {
+            margin-top: 10px;
+        }
+        #refresh-data-button {
+            margin-left: 15px;
+            padding: 8px 12px;
+        }
     </style>
 </head>
 <body>
@@ -55,31 +76,31 @@
         <h1>管理者ログイン</h1>
         <div id="login-error"></div>
         <input type="email" id="email" placeholder="メールアドレス" required>
-        <input type="password" id="password" placeholder="パスワード" required>
+        <h1>管理者ダッシュボード <button id="login-logout-button">ログアウト</button></h1>
         <button id="login-button">ログイン</button>
     </div>
 
     <div id="dashboard-content" class="dashboard-container hidden"> <!-- 最初は非表示 -->
-        <h1>管理者ダッシュボード <button id="logout-button" style="float:right; font-size:0.7em; padding: 5px 10px;">ログアウト</button></h1>
-
+        <h1>管理者ダッシュボード <button id="dashboard-logout-button">ログアウト</button></h1>
+            <span class="margin-horizontal">または</span>
         <div class="controls">
             <label for="date-selector">日付選択:</label>
             <input type="date" id="date-selector">
-            <span style="margin-left:10px; margin-right:10px;">または</span>
+            <span class="margin-horizontal">または</span>
             <label for="time-range-selector">期間:</label>
             <select id="time-range-selector">
                 <option value="all_time" selected>全期間</option>
                 <option value="today">本日 (リアルタイム)</option>
-                <option value="last_3_hours">過去3時間 (リアルタイム)</option>
-                <option value="custom_range">指定日範囲 (下記で選択)</option>
-            </select>
-            <div id="custom-range-picker" class="hidden" style="margin-top:10px;">
+            <div id="custom-range-picker" class="hidden">
                 <label for="start-date">開始日:</label>
                 <input type="date" id="start-date">
                 <label for="end-date">終了日:</label>
                 <input type="date" id="end-date">
+            <button id="refresh-data-button">データ表示/更新</button>
+                <label for="end-date">終了日:</label>
+                <input type="date" id="end-date">
             </div>
-            <button id="refresh-data-button" style="margin-left: 15px; padding: 8px 12px;">データ表示/更新</button>
+            <button id="refresh-data-button">データ表示/更新</button>
         </div>
 
         <h2>商品別 売上・返品状況 (金額ベース)</h2>
