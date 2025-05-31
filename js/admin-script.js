@@ -1,7 +1,22 @@
 document.addEventListener('DOMContentLoaded', () => {
+    const auth = firebase.auth(); // Authインスタンスを取得
+    const db = firebase.firestore(); // これは firebase-config.js で定義されているはず
+
+    const loginContainer = document.getElementById('login-container');
+    const dashboardContent = document.getElementById('dashboard-content');
+    const loginButton = document.getElementById('login-button');
+    const emailInput = document.getElementById('email');
+    const passwordInput = document.getElementById('password');
+    const loginErrorDiv = document.getElementById('login-error');
+    const logoutButton = document.getElementById('logout-button');
+
     const salesByProductCtx = document.getElementById('salesByProductChart')?.getContext('2d');
     const salesOverTimeCtx = document.getElementById('salesOverTimeChart')?.getContext('2d');
+    const dateSelector = document.getElementById('date-selector');
     const timeRangeSelector = document.getElementById('time-range-selector');
+    const customRangePicker = document.getElementById('custom-range-picker');
+    const startDateInput = document.getElementById('start-date');
+    const endDateInput = document.getElementById('end-date');
     const refreshDataButton = document.getElementById('refresh-data-button');
 
     const adminServingTicketSpan = document.getElementById('admin-serving-ticket');
@@ -10,34 +25,149 @@ document.addEventListener('DOMContentLoaded', () => {
 
     let salesByProductChartInstance = null;
     let salesOverTimeChartInstance = null;
-    let allSalesData = []; // 全期間の売上データを保持
+    // let allSalesData = []; // 期間指定するため、毎回フェッチする形に変更
 
-    // --- データの取得と整形 ---
+    // --- 認証状態の監視 ---
+    auth.onAuthStateChanged(user => {
+        if (user) {
+            // ユーザーがログインしている場合
+            loginContainer.classList.add('hidden');
+            dashboardContent.classList.remove('hidden');
+            console.log("User logged in:", user.email);
+            initializeDashboard(); // ログイン後にダッシュボードを初期化
+        } else {
+            // ユーザーがログアウトしている場合
+            loginContainer.classList.remove('hidden');
+            dashboardContent.classList.add('hidden');
+            console.log("User logged out.");
+            // グラフインスタンスがあれば破棄
+            if (salesByProductChartInstance) salesByProductChartInstance.destroy();
+            if (salesOverTimeChartInstance) salesOverTimeChartInstance.destroy();
+        }
+    });
+
+    // --- ログイン処理 ---
+    loginButton.addEventListener('click', () => {
+        const email = emailInput.value;
+        const password = passwordInput.value;
+        loginErrorDiv.textContent = ''; // エラーメッセージをクリア
+
+        auth.signInWithEmailAndPassword(email, password)
+            .then(userCredential => {
+                // ログイン成功
+                console.log("Login successful:", userCredential.user);
+            })
+            .catch(error => {
+                console.error("Login failed:", error);
+                loginErrorDiv.textContent = "メールアドレスまたはパスワードが正しくありません。";
+            });
+    });
+
+    // --- ログアウト処理 ---
+    logoutButton.addEventListener('click', () => {
+        auth.signOut().then(() => {
+            console.log("Logout successful");
+        }).catch(error => {
+            console.error("Logout failed:", error);
+        });
+    });
+
+    // --- UI制御: 期間セレクタ ---
+    timeRangeSelector.addEventListener('change', () => {
+        if (timeRangeSelector.value === 'custom_range') {
+            customRangePicker.classList.remove('hidden');
+            dateSelector.value = ''; // 日付指定をクリア
+        } else {
+            customRangePicker.classList.add('hidden');
+            if (timeRangeSelector.value !== 'today' && timeRangeSelector.value !== 'last_3_hours') {
+                 dateSelector.value = ''; // リアルタイム系以外は日付指定をクリア
+            }
+        }
+        if (timeRangeSelector.value === 'today') {
+            const today = new Date().toISOString().split('T')[0];
+            dateSelector.value = today; // 本日を選択したら日付セレクタも今日に
+        }
+    });
+    dateSelector.addEventListener('change', () => {
+        if (dateSelector.value) {
+            timeRangeSelector.value = 'all_time'; // 日付指定したら期間は一旦all_timeに戻す (UI的な挙動)
+                                               // または "custom_range" にして、開始日・終了日をdateSelectorの値に合わせるなども可
+            customRangePicker.classList.add('hidden');
+        }
+    });
+
+
+    // --- データの取得と整形 (期間指定対応) ---
     async function fetchDataAndRenderCharts() {
         try {
-            let query = db.collection('sales').orderBy('timestamp', 'desc');
-            const selectedRange = timeRangeSelector.value;
-            const now = new Date();
+            let query = db.collection('sales').orderBy('timestamp', 'desc'); // 基本は降順
+            const selectedDate = dateSelector.value;
+            const selectedRangeOption = timeRangeSelector.value;
+
             let startTime = null;
+            let endTime = null;
+            const now = new Date();
 
-            if (selectedRange === "today") {
-                startTime = new Date(now.getFullYear(), now.getMonth(), now.getDate()); // 今日の0時
-            } else if (selectedRange === "last_hour") {
-                startTime = new Date(now.getTime() - 60 * 60 * 1000); // 1時間前
-            } else if (selectedRange === "last_3_hours") {
-                startTime = new Date(now.getTime() - 3 * 60 * 60 * 1000); // 3時間前
+            if (selectedDate) { // 日付指定が優先
+                startTime = new Date(selectedDate);
+                startTime.setHours(0, 0, 0, 0); // 指定日の00:00:00
+                endTime = new Date(selectedDate);
+                endTime.setHours(23, 59, 59, 999); // 指定日の23:59:59
+            } else { // 日付指定がない場合は期間セレクタを見る
+                switch (selectedRangeOption) {
+                    case 'today':
+                        startTime = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+                        endTime = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+                        break;
+                    case 'last_3_hours':
+                        startTime = new Date(now.getTime() - 3 * 60 * 60 * 1000);
+                        endTime = now; // 現在時刻まで
+                        break;
+                    case 'custom_range':
+                        if (startDateInput.value) {
+                            startTime = new Date(startDateInput.value);
+                            startTime.setHours(0,0,0,0);
+                        }
+                        if (endDateInput.value) {
+                            endTime = new Date(endDateInput.value);
+                            endTime.setHours(23,59,59,999);
+                        }
+                        if (startTime && endTime && startTime > endTime) {
+                            alert("開始日は終了日より前に設定してください。");
+                            return;
+                        }
+                        break;
+                    case 'all_time':
+                    default:
+                        // startTime, endTime は null のまま (全期間)
+                        break;
+                }
             }
-            // "all_time" の場合は startTime は null のまま
 
+            // Firestoreクエリの構築
             if (startTime) {
                 query = query.where('timestamp', '>=', startTime);
             }
+            if (endTime) {
+                // Firestoreの降順ソートと範囲クエリの組み合わせでは、
+                // where('timestamp', '<=', endTime) と orderBy('timestamp', 'desc') を使う場合、
+                // 先に endTime でフィルタリングし、その後クライアント側で startTime を考慮するか、
+                // または orderBy('timestamp', 'asc') にして where で両端を指定する。
+                // ここでは簡便のため、descのまま < endTime でフィルタし、クライアント側でさらに絞るか、
+                // もしくはFirestoreのクエリの制約を考慮して昇順にする。
+                // 今回は一旦 < endTime で取得し、クライアント側でフィルタはしない。
+                // より正確には orderBy('timestamp', 'asc') で where >= startTime and where <= endTime が良い
+                query = query.where('timestamp', '<=', endTime);
+            }
+            // 注意: Firestoreでは複数の範囲フィルタを異なるフィールドに適用できません。
+            // timestamp に対する >= と <= はOKです。
 
             const snapshot = await query.get();
-            allSalesData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            const salesData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
-            renderSalesByProductChart(allSalesData);
-            renderSalesOverTimeChart(allSalesData);
+            renderSalesByProductChart(salesData);
+            // 3時間ごとの集計は、取得した salesData と選択された期間(startTime, endTime)を渡す
+            renderSalesOverTimeChart(salesData, startTime, endTime);
 
         } catch (error) {
             console.error("Error fetching sales data: ", error);
@@ -45,11 +175,153 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // --- 商品別売上・返品グラフ ---
+
+    // --- 時間帯別 総売上・総返品 推移グラフ (3時間ごと集計) ---
+    function renderSalesOverTimeChart(salesData, overallStartTime, overallEndTime) {
+        if (!salesOverTimeCtx) return;
+
+        const salesByTimeSlot = {}; // { 'YYYY-MM-DD HH(slot start)': { salesAmount, refundAmount } }
+        const slotHours = 3; // 3時間ごとのスロット
+
+        // 表示する全体の期間を決定
+        let chartStartTime, chartEndTime;
+        if (overallStartTime && overallEndTime) {
+            chartStartTime = new Date(overallStartTime);
+            chartEndTime = new Date(overallEndTime);
+        } else if (salesData.length > 0) {
+            // 全期間の場合、データの一番古いものと新しいものから期間を設定
+            const timestamps = salesData.map(s => s.timestamp.toDate().getTime());
+            chartStartTime = new Date(Math.min(...timestamps));
+            chartEndTime = new Date(Math.max(...timestamps));
+        } else {
+            // データがない場合はデフォルトの期間（例: 今日）
+            chartStartTime = new Date();
+            chartStartTime.setHours(0,0,0,0);
+            chartEndTime = new Date();
+            chartEndTime.setHours(23,59,59,999);
+        }
+         // chartStartTime の時を slotHours の倍数に丸める (切り捨て)
+        chartStartTime.setHours(Math.floor(chartStartTime.getHours() / slotHours) * slotHours, 0, 0, 0);
+
+
+        // 3時間ごとのラベルを生成
+        const labels = [];
+        let currentSlotStart = new Date(chartStartTime);
+        while (currentSlotStart <= chartEndTime) {
+            const year = currentSlotStart.getFullYear();
+            const month = String(currentSlotStart.getMonth() + 1).padStart(2, '0');
+            const day = String(currentSlotStart.getDate()).padStart(2, '0');
+            const hour = String(currentSlotStart.getHours()).padStart(2, '0');
+            const slotKey = `${year}-${month}-${day} ${hour}:00`;
+            labels.push(slotKey);
+            salesByTimeSlot[slotKey] = { salesAmount: 0, refundAmount: 0, salesCount: 0, refundCount: 0 };
+            currentSlotStart.setHours(currentSlotStart.getHours() + slotHours);
+        }
+        // 最後のスロットが endTime を超えないように調整（必要なら）
+        if (labels.length > 0 && new Date(labels[labels.length - 1]) > chartEndTime && labels.length > 1) {
+           // labels.pop(); // 最後のラベルが範囲外なら削除 (ケースバイケース)
+        }
+
+
+        salesData.forEach(sale => {
+            if (!sale.timestamp || !sale.timestamp.toDate) return;
+            const saleTime = sale.timestamp.toDate();
+
+            // どの3時間スロットに属するかを決定
+            const saleHour = saleTime.getHours();
+            const slotStartHour = Math.floor(saleHour / slotHours) * slotHours;
+            
+            const slotKeyDate = new Date(saleTime);
+            slotKeyDate.setHours(slotStartHour, 0, 0, 0); // 分、秒、ミリ秒をリセット
+
+            const year = slotKeyDate.getFullYear();
+            const month = String(slotKeyDate.getMonth() + 1).padStart(2, '0');
+            const day = String(slotKeyDate.getDate()).padStart(2, '0');
+            const hourStr = String(slotKeyDate.getHours()).padStart(2, '0');
+            const slotKey = `${year}-${month}-${day} ${hourStr}:00`;
+
+
+            if (salesByTimeSlot[slotKey]) {
+                let transactionAmount = 0;
+                let transactionCount = 0;
+                sale.items.forEach(item => {
+                    transactionAmount += item.price * item.quantity;
+                    transactionCount += item.quantity;
+                });
+
+                if (sale.status === 'completed') {
+                    salesByTimeSlot[slotKey].salesAmount += transactionAmount;
+                    salesByTimeSlot[slotKey].salesCount += transactionCount;
+                } else if (sale.status === 'refunded') {
+                    salesByTimeSlot[slotKey].refundAmount += transactionAmount;
+                    salesByTimeSlot[slotKey].refundCount += transactionCount;
+                }
+            }
+        });
+        
+        const salesAmounts = labels.map(key => salesByTimeSlot[key] ? salesByTimeSlot[key].salesAmount : 0);
+        const refundAmounts = labels.map(key => salesByTimeSlot[key] ? salesByTimeSlot[key].refundAmount : 0);
+
+        if (salesOverTimeChartInstance) {
+            salesOverTimeChartInstance.destroy();
+        }
+        salesOverTimeChartInstance = new Chart(salesOverTimeCtx, {
+            type: 'bar', // 棒グラフの方が見やすいかも
+            data: {
+                labels: labels,
+                datasets: [
+                    {
+                        label: '総売上金額 (円)',
+                        data: salesAmounts,
+                        backgroundColor: 'rgba(54, 162, 235, 0.7)',
+                        borderColor: 'rgba(54, 162, 235, 1)',
+                        borderWidth: 1
+                    },
+                    {
+                        label: '総返品金額 (円)',
+                        data: refundAmounts,
+                        backgroundColor: 'rgba(255, 159, 64, 0.7)',
+                        borderColor: 'rgba(255, 159, 64, 1)',
+                        borderWidth: 1
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        title: { display: true, text: '金額 (円)' }
+                    },
+                    x: {
+                        title: { display: true, text: '時間帯 (3時間ごと)' },
+                        // type: 'time', // date-fnsアダプタを使う場合
+                        // time: {
+                        //     unit: 'hour',
+                        //     stepSize: 3,
+                        //     displayFormats: {
+                        //         hour: 'MM/dd HH:mm'
+                        //     }
+                        // }
+                    }
+                },
+                plugins: {
+                    tooltip: {
+                        mode: 'index',
+                        intersect: false,
+                    }
+                }
+            }
+        });
+    }
+
+    // 商品別グラフ関数は変更なし (renderSalesByProductChart) ...
+    // (前回のコードをそのまま使用)
     function renderSalesByProductChart(salesData) {
         if (!salesByProductCtx) return;
 
-        const productSales = {}; // { productId: { name, salesAmount, refundAmount, salesCount, refundCount } }
+        const productSales = {}; 
 
         salesData.forEach(sale => {
             if (!sale.items) return;
@@ -69,13 +341,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     productSales[item.productId].salesAmount += item.price * item.quantity;
                     productSales[item.productId].salesCount += item.quantity;
                 } else if (sale.status === 'refunded') {
-                    // 全返品を想定し、購入時のアイテムを返品として計上
                     productSales[item.productId].refundAmount += item.price * item.quantity;
                     productSales[item.productId].refundCount += item.quantity;
-                    // もし返品時に売上からも引くなら以下も（二重計上にならないように注意）
-                    // productSales[item.productId].salesAmount -= item.price * item.quantity;
                 }
-                // 'cancelled' は売上にも返品にも計上しない (取引自体が無効)
             });
         });
 
@@ -84,10 +352,10 @@ document.addEventListener('DOMContentLoaded', () => {
         const refundAmounts = Object.values(productSales).map(p => p.refundAmount);
 
         if (salesByProductChartInstance) {
-            salesByProductChartInstance.destroy(); // 既存のグラフを破棄
+            salesByProductChartInstance.destroy(); 
         }
         salesByProductChartInstance = new Chart(salesByProductCtx, {
-            type: 'bar', // 積み上げ棒グラフやグループ化棒グラフも検討可
+            type: 'bar', 
             data: {
                 labels: labels,
                 datasets: [
@@ -130,13 +398,6 @@ document.addEventListener('DOMContentLoaded', () => {
                                 if (context.parsed.y !== null) {
                                     label += new Intl.NumberFormat('ja-JP', { style: 'currency', currency: 'JPY' }).format(context.parsed.y);
                                 }
-                                // 数量も表示したい場合:
-                                // const productName = context.label;
-                                // const productData = Object.values(productSales).find(p => p.name === productName);
-                                // if (productData) {
-                                //    const count = (context.dataset.label.includes('売上') ? productData.salesCount : productData.refundCount);
-                                //    label += ` (${count}個)`;
-                                // }
                                 return label;
                             }
                         }
@@ -146,96 +407,10 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // --- 時間帯別 総売上・総返品 推移グラフ ---
-    function renderSalesOverTimeChart(salesData) {
-        if (!salesOverTimeCtx) return;
 
-        // データを時間帯ごと（例: 1時間ごと）に集計
-        const salesByHour = {}; // { 'YYYY-MM-DD HH': { sales, refunds } }
-
-        salesData.forEach(sale => {
-            if (!sale.timestamp || !sale.timestamp.toDate) return; // タイムスタンプがないデータはスキップ
-            const saleTime = sale.timestamp.toDate();
-            const hourKey = `${saleTime.getFullYear()}-${String(saleTime.getMonth() + 1).padStart(2, '0')}-${String(saleTime.getDate()).padStart(2, '0')} ${String(saleTime.getHours()).padStart(2, '0')}:00`;
-
-            if (!salesByHour[hourKey]) {
-                salesByHour[hourKey] = { salesAmount: 0, refundAmount: 0, salesCount: 0, refundCount: 0 };
-            }
-
-            let transactionAmount = 0;
-            let transactionCount = 0;
-            sale.items.forEach(item => {
-                transactionAmount += item.price * item.quantity;
-                transactionCount += item.quantity;
-            });
-
-
-            if (sale.status === 'completed') {
-                salesByHour[hourKey].salesAmount += transactionAmount;
-                salesByHour[hourKey].salesCount += transactionCount;
-            } else if (sale.status === 'refunded') {
-                salesByHour[hourKey].refundAmount += transactionAmount;
-                salesByHour[hourKey].refundCount += transactionCount;
-            }
-        });
-
-        const sortedHourKeys = Object.keys(salesByHour).sort(); // 時間順にソート
-
-        const labels = sortedHourKeys;
-        const salesAmounts = sortedHourKeys.map(key => salesByHour[key].salesAmount);
-        const refundAmounts = sortedHourKeys.map(key => salesByHour[key].refundAmount);
-
-        if (salesOverTimeChartInstance) {
-            salesOverTimeChartInstance.destroy();
-        }
-        salesOverTimeChartInstance = new Chart(salesOverTimeCtx, {
-            type: 'line',
-            data: {
-                labels: labels,
-                datasets: [
-                    {
-                        label: '総売上金額 (円)',
-                        data: salesAmounts,
-                        borderColor: 'rgba(54, 162, 235, 1)',
-                        backgroundColor: 'rgba(54, 162, 235, 0.2)',
-                        fill: true,
-                        tension: 0.1
-                    },
-                    {
-                        label: '総返品金額 (円)',
-                        data: refundAmounts,
-                        borderColor: 'rgba(255, 159, 64, 1)',
-                        backgroundColor: 'rgba(255, 159, 64, 0.2)',
-                        fill: true,
-                        tension: 0.1
-                    }
-                ]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                scales: {
-                    y: {
-                        beginAtZero: true,
-                        title: { display: true, text: '金額 (円)' }
-                    },
-                    x: {
-                        title: { display: true, text: '時間帯' }
-                        // type: 'time' を使うとより高度な時間軸表現が可能だが、データ整形が必要
-                    }
-                },
-                plugins: {
-                    tooltip: {
-                        mode: 'index',
-                        intersect: false,
-                    }
-                }
-            }
-        });
-    }
-
-    // --- 待ち行列情報の表示 ---
+    // --- 待ち行列情報の表示 (変更なし) ---
     function displayQueueStatus() {
+        // ... (前回のコードと同じ) ...
         const queueStatusRef = db.collection('queue').doc('currentStatus');
         queueStatusRef.onSnapshot(doc => {
             if (doc.exists) {
@@ -255,20 +430,22 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
     // --- イベントリスナー ---
-    timeRangeSelector.addEventListener('change', fetchDataAndRenderCharts);
     refreshDataButton.addEventListener('click', fetchDataAndRenderCharts);
 
-    // --- 初期化 ---
-    async function initializeAdminPage() {
+    // --- ダッシュボード初期化 (ログイン後) ---
+    function initializeDashboard() {
         // Firebaseの初期化は firebase-config.js で行われている前提
         if (typeof firebase === 'undefined' || typeof db === 'undefined') {
-            console.error("Firebase is not initialized. Make sure firebase-config.js is loaded and configured correctly.");
-            alert("Firebaseの初期化に失敗しました。設定を確認してください。");
+            console.error("Firebase is not initialized.");
+            alert("Firebaseの初期化に失敗しました。");
             return;
         }
-        await fetchDataAndRenderCharts();
-        displayQueueStatus(); // 待ち状況も表示
+        const today = new Date().toISOString().split('T')[0];
+        dateSelector.value = today; // デフォルトは本日を表示
+        timeRangeSelector.value = 'all_time'; // or 'today' 
+        fetchDataAndRenderCharts();
+        displayQueueStatus();
     }
 
-    initializeAdminPage();
+    // ページロード時の処理は onAuthStateChanged 内で制御されるため、ここでの直接的な initializeDashboard() 呼び出しは不要
 });
