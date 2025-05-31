@@ -9,5 +9,5 @@
   };
 
   // Firebaseを初期化
-  firebaseConfig.initializeApp(firebaseConfig);
+  firebase.initializeApp(firebaseConfig);
   const db = firebase.firestore(); //Firestoreインスタンスを取得
