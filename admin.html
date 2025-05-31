@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>管理者ダッシュボード</title>
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        /* ... (既存のスタイル) ... */
+        #login-container {
+            width: 100%;
+            max-width: 400px;
+            margin: 50px auto;
+            padding: 20px;
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        #login-container h1 {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        #login-container input[type="email"],
+        #login-container input[type="password"] {
+            width: calc(100% - 22px);
+            padding: 10px;
+            margin-bottom: 15px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        #login-container button {
+            width: 100%;
+            padding: 10px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        #login-container button:hover {
+            background-color: #0056b3;
+        }
+        #login-error {
+            color: red;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+        .hidden {
+            display: none !important;
+        }
+    </style>
+</head>
+<body>
+    <div id="login-container">
+        <h1>管理者ログイン</h1>
+        <div id="login-error"></div>
+        <input type="email" id="email" placeholder="メールアドレス" required>
+        <input type="password" id="password" placeholder="パスワード" required>
+        <button id="login-button">ログイン</button>
+    </div>
+
+    <div id="dashboard-content" class="dashboard-container hidden"> <!-- 最初は非表示 -->
+        <h1>管理者ダッシュボード <button id="logout-button" style="float:right; font-size:0.7em; padding: 5px 10px;">ログアウト</button></h1>
+
+        <div class="controls">
+            <label for="date-selector">日付選択:</label>
+            <input type="date" id="date-selector">
+            <span style="margin-left:10px; margin-right:10px;">または</span>
+            <label for="time-range-selector">期間:</label>
+            <select id="time-range-selector">
+                <option value="all_time" selected>全期間</option>
+                <option value="today">本日 (リアルタイム)</option>
+                <option value="last_3_hours">過去3時間 (リアルタイム)</option>
+                <option value="custom_range">指定日範囲 (下記で選択)</option>
+            </select>
+            <div id="custom-range-picker" class="hidden" style="margin-top:10px;">
+                <label for="start-date">開始日:</label>
+                <input type="date" id="start-date">
+                <label for="end-date">終了日:</label>
+                <input type="date" id="end-date">
+            </div>
+            <button id="refresh-data-button" style="margin-left: 15px; padding: 8px 12px;">データ表示/更新</button>
+        </div>
+
+        <h2>商品別 売上・返品状況 (金額ベース)</h2>
+        <div class="chart-container">
+            <canvas id="salesByProductChart"></canvas>
+        </div>
+
+        <h2>時間帯別 売上・返品 推移 (選択期間の3時間ごと)</h2>
+        <div class="chart-container">
+            <canvas id="salesOverTimeChart"></canvas>
+        </div>
+
+        <h2>現在の待ち状況 (参考)</h2>
+        <p>現在対応中: <span id="admin-serving-ticket">N/A</span></p>
+        <p>最新の発行番号: <span id="admin-last-issued-ticket">N/A</span></p>
+        <p>現在の待ち人数: <span id="admin-waiting-count">N/A</span> 人</p>
+    </div>
+
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script> <!-- Auth SDK追加 -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script> <!-- date-fnsアダプタ追加 -->
+
+
+    <script src="js/firebase-config.js"></script>
+    <script src="js/admin-script.js"></script>
+</body>
+</html>
