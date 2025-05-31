@@ -108,3 +108,66 @@ body {
 #next-customer-button:hover {
     background-color: #c9302c;
 }
+
+/* --- 上部ナビゲーションバナー --- */
+.top-navigation-banner {
+    background-color: #333; /* バナーの背景色 (濃いグレー) */
+    padding: 15px 0; /* 上下のパディング */
+    width: 100%;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    text-align: center; /* ボタンを中央寄せにする場合 */
+    position: fixed; /* 画面上部に固定 */
+    top: 0;
+    left: 0;
+    z-index: 1000; /* 他の要素より手前に表示 */
+}
+
+.top-navigation-banner nav ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: inline-block; /* 中央寄せのため */
+}
+
+.top-navigation-banner nav li {
+    display: inline-block; /* ボタンを横並びにする */
+    margin: 0 10px; /* ボタン間のマージン */
+}
+
+.top-navigation-banner nav a {
+    color: white; /* 文字色 */
+    text-decoration: none;
+    padding: 10px 20px; /* ボタンのパディング */
+    border: 1px solid #555; /* ボタンの枠線 */
+    border-radius: 5px;
+    background-color: #4CAF50; /* ボタンの背景色 (例: 緑) */
+    transition: background-color 0.3s ease;
+}
+
+.top-navigation-banner nav a:hover,
+.top-navigation-banner nav a.active { /* アクティブなページのリンクを目立たせる (オプション) */
+    background-color: #45a049; /* ホバー時の背景色 */
+    border-color: #777;
+}
+
+/* ページコンテンツが固定ヘッダーに隠れないようにするためのマージン */
+body {
+    /* ... (既存のbodyスタイル) ... */
+    padding-top: 80px; /* バナーの高さに応じて調整 (padding + borderなど考慮) */
+}
+
+/* admin.html のログインコンテナがバナーに隠れないように調整 */
+#login-container {
+    /* ... (既存の #login-container スタイル) ... */
+    margin-top: 100px; /* バナーの高さ + 少し余裕 */
+}
+
+/* dashboard-contentも同様に調整 */
+#dashboard-content.dashboard-container {
+    /* bodyにpadding-topがあるので、個別のmargin-topは不要になるかも。要調整 */
+}
+
+/* 必要に応じて、既存の .pos-container や .queue-info の margin-top も調整 */
+.pos-container, .queue-info, .dashboard-container {
+    /* margin-top: 20px;  <-- もし以前こういった指定があれば、bodyのpadding-topでカバーされるか確認 */
+}
