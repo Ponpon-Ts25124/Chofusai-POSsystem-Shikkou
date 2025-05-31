@@ -1,6 +1,6 @@
 document.addEventListener('DOMContentLoaded', () => {
-    const auth = firebase.auth(); // Authインスタンスを取得
-    const db = firebase.firestore(); // これは firebase-config.js で定義されているはず
+    const auth = firebase.auth();
+    const db = firebase.firestore();
 
     const loginContainer = document.getElementById('login-container');
     const dashboardContent = document.getElementById('dashboard-content');
@@ -10,52 +10,52 @@ document.addEventListener('DOMContentLoaded', () => {
     const loginErrorDiv = document.getElementById('login-error');
     const logoutButton = document.getElementById('logout-button');
 
-    const salesByProductCtx = document.getElementById('salesByProductChart')?.getContext('2d');
-    const salesOverTimeCtx = document.getElementById('salesOverTimeChart')?.getContext('2d');
-    const dateSelector = document.getElementById('date-selector');
-    const timeRangeSelector = document.getElementById('time-range-selector');
-    const customRangePicker = document.getElementById('custom-range-picker');
-    const startDateInput = document.getElementById('start-date');
-    const endDateInput = document.getElementById('end-date');
-    const refreshDataButton = document.getElementById('refresh-data-button');
-
-    const adminServingTicketSpan = document.getElementById('admin-serving-ticket');
-    const adminLastIssuedTicketSpan = document.getElementById('admin-last-issued-ticket');
-    const adminWaitingCountSpan = document.getElementById('admin-waiting-count');
-
-    let salesByProductChartInstance = null;
-    let salesOverTimeChartInstance = null;
-    // let allSalesData = []; // 期間指定するため、毎回フェッチする形に変更
-
     // --- 認証状態の監視 ---
     auth.onAuthStateChanged(user => {
         if (user) {
             // ユーザーがログインしている場合
-            loginContainer.classList.add('hidden');
-            dashboardContent.classList.remove('hidden');
             console.log("User logged in:", user.email);
-            initializeDashboard(); // ログイン後にダッシュボードを初期化
+            loginContainer.classList.add('hidden'); // ログインフォームを隠す
+            dashboardContent.style.display = 'block'; // ★★★ ダッシュボードを表示 (CSSでnoneにしているのでblockで表示)
+            dashboardContent.classList.remove('hidden'); // hiddenクラスも念のため削除
+
+            initializeDashboard(); // ダッシュボードのコンテンツを初期化・描画
         } else {
-            // ユーザーがログアウトしている場合
-            loginContainer.classList.remove('hidden');
-            dashboardContent.classList.add('hidden');
-            console.log("User logged out.");
-            // グラフインスタンスがあれば破棄
-            if (salesByProductChartInstance) salesByProductChartInstance.destroy();
-            if (salesOverTimeChartInstance) salesOverTimeChartInstance.destroy();
+            // ユーザーがログアウトしている、または未ログインの場合
+            console.log("User logged out or not logged in.");
+            loginContainer.classList.remove('hidden'); // ログインフォームを表示
+            loginContainer.style.display = 'block'; // 表示を確実にする
+            dashboardContent.style.display = 'none';   // ★★★ ダッシュボードを隠す
+            dashboardContent.classList.add('hidden');  // hiddenクラスも念のため追加
+
+            // ログイン画面でエラーメッセージが残っていればクリア
+            if(loginErrorDiv) loginErrorDiv.textContent = '';
+            if(emailInput) emailInput.value = '';
+            if(passwordInput) passwordInput.value = '';
+
+
+            // グラフインスタンスがあれば破棄 (ログアウト時)
+            if (salesByProductChartInstance) {
+                salesByProductChartInstance.destroy();
+                salesByProductChartInstance = null;
+            }
+            if (salesOverTimeChartInstance) {
+                salesOverTimeChartInstance.destroy();
+                salesOverTimeChartInstance = null;
+            }
         }
     });
 
     // --- ログイン処理 ---
     loginButton.addEventListener('click', () => {
+        // ... (既存のログイン処理) ...
         const email = emailInput.value;
         const password = passwordInput.value;
-        loginErrorDiv.textContent = ''; // エラーメッセージをクリア
+        loginErrorDiv.textContent = '';
 
         auth.signInWithEmailAndPassword(email, password)
             .then(userCredential => {
-                // ログイン成功
-                console.log("Login successful:", userCredential.user);
+                // ログイン成功時の処理は onAuthStateChanged に任せる
             })
             .catch(error => {
                 console.error("Login failed:", error);
@@ -66,11 +66,14 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- ログアウト処理 ---
     logoutButton.addEventListener('click', () => {
         auth.signOut().then(() => {
-            console.log("Logout successful");
+            // ログアウト成功時の処理は onAuthStateChanged に任せる
         }).catch(error => {
             console.error("Logout failed:", error);
         });
     });
+
+    // ... (fetchDataAndRenderCharts, renderSalesByProductChart, renderSalesOverTimeChart, displayQueueStatus, initializeDashboard などは変更なし) ...
+    // ただし、initializeDashboardはログイン成功時に呼び出されるようにする
 
     // --- UI制御: 期間セレクタ ---
     timeRangeSelector.addEventListener('change', () => {
@@ -429,23 +432,35 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
 
-    // --- イベントリスナー ---
-    refreshDataButton.addEventListener('click', fetchDataAndRenderCharts);
-
-    // --- ダッシュボード初期化 (ログイン後) ---
+    // --- ダッシュボード初期化 (ログイン後に呼び出される) ---
     function initializeDashboard() {
-        // Firebaseの初期化は firebase-config.js で行われている前提
         if (typeof firebase === 'undefined' || typeof db === 'undefined') {
-            console.error("Firebase is not initialized.");
+            console.error("Firebase or DB not initialized.");
             alert("Firebaseの初期化に失敗しました。");
             return;
         }
         const today = new Date().toISOString().split('T')[0];
-        dateSelector.value = today; // デフォルトは本日を表示
-        timeRangeSelector.value = 'all_time'; // or 'today' 
-        fetchDataAndRenderCharts();
-        displayQueueStatus();
+        const dateSelector = document.getElementById('date-selector'); // 再取得
+        const timeRangeSelector = document.getElementById('time-range-selector'); // 再取得
+
+        if(dateSelector) dateSelector.value = today;
+        if(timeRangeSelector) timeRangeSelector.value = 'all_time'; // または 'today'
+
+        fetchDataAndRenderCharts(); // グラフなどのデータを取得・描画
+        displayQueueStatus();       // 待ち状況を表示
     }
 
-    // ページロード時の処理は onAuthStateChanged 内で制御されるため、ここでの直接的な initializeDashboard() 呼び出しは不要
+    // イベントリスナー (refreshDataButtonなど)
+    const refreshDataButton = document.getElementById('refresh-data-button');
+    if(refreshDataButton) { // refreshDataButtonがダッシュボード内にあれば、存在確認をする
+        refreshDataButton.addEventListener('click', fetchDataAndRenderCharts);
+    }
+    // 期間セレクタなどのイベントリスナーも同様に、要素の存在確認をしてから登録
+    const dateSelectorElem = document.getElementById('date-selector');
+    const timeRangeSelectorElem = document.getElementById('time-range-selector');
+    // ... (これらの要素に対するイベントリスナーも、要素が存在する場合のみ設定する方が安全)
+
+
+    // ページロード時の直接的な initializeDashboard() 呼び出しは削除。
+    // onAuthStateChanged が最初の状態を判断し、必要なら呼び出す。
 });
