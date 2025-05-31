@@ -178,6 +178,147 @@ document.addEventListener('DOMContentLoaded', () => {
             console.log("Initialized queue status.");
         }
     }
+// ... (既存のコード) ...
 
+const searchTicketNumberInput = document.getElementById('search-ticket-number');
+const searchTransactionButton = document.getElementById('search-transaction-button');
+const transactionDetailsDiv = document.getElementById('transaction-details');
+const detailTicketNumberSpan = document.getElementById('detail-ticket-number');
+const detailTimestampSpan = document.getElementById('detail-timestamp');
+const detailTotalAmountSpan = document.getElementById('detail-total-amount');
+const detailItemsUl = document.getElementById('detail-items');
+const detailStatusSpan = document.getElementById('detail-status');
+const refundTransactionButton = document.getElementById('refund-transaction-button');
+const cancelLatestTransactionButton = document.getElementById('cancel-latest-transaction-button');
+
+let currentFoundSaleId = null; // 検索で見つかった取引のIDを保持
+
+// 最新の会計を取り消す機能 (会計直後の対応を想定)
+cancelLatestTransactionButton.addEventListener('click', async () => {
+    if (!confirm("最新の会計を取り消しますか？整理券が無効になり、待ち人数が調整されます。")) {
+        return;
+    }
+    try {
+        // 最新の会計データを取得 (ticketNumberが最も大きいもの、またはtimestampで降順ソートしてlimit(1))
+        const salesRef = db.collection('sales').orderBy('timestamp', 'desc').limit(1);
+        const snapshot = await salesRef.get();
+
+        if (snapshot.empty) {
+            alert("取消対象の取引が見つかりません。");
+            return;
+        }
+        const latestSaleDoc = snapshot.docs[0];
+        const latestSaleData = latestSaleDoc.data();
+
+        if (latestSaleData.status === "cancelled" || latestSaleData.status === "refunded") {
+            alert("この取引は既に取り消しまたは返品済みです。");
+            return;
+        }
+
+        // salesドキュメントを更新
+        await db.collection('sales').doc(latestSaleDoc.id).update({
+            status: "cancelled",
+            modifiedAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+
+        // queueのwaitingCountを減らす
+        const queueStatusRef = db.collection('queue').doc('currentStatus');
+        await db.runTransaction(async (transaction) => {
+            const queueDoc = await transaction.get(queueStatusRef);
+            if (queueDoc.exists && (queueDoc.data().waitingCount || 0) > 0) {
+                transaction.update(queueStatusRef, {
+                    waitingCount: firebase.firestore.FieldValue.increment(-1)
+                });
+            }
+        });
+
+        alert(`整理番号 ${latestSaleData.ticketNumber} の取引を取り消しました。待ち人数を調整しました。`);
+        transactionDetailsDiv.style.display = 'none'; // 詳細表示を隠す
+
+    } catch (error) {
+        console.error("Error cancelling latest transaction: ", error);
+        alert("最新取引の取消中にエラーが発生しました。");
+    }
+});
+
+
+searchTransactionButton.addEventListener('click', async () => {
+    const ticketNumberToSearch = parseInt(searchTicketNumberInput.value);
+    if (isNaN(ticketNumberToSearch)) {
+        alert("有効な整理番号を入力してください。");
+        return;
+    }
+
+    try {
+        const salesRef = db.collection('sales').where("ticketNumber", "==", ticketNumberToSearch);
+        const snapshot = await salesRef.get();
+
+        if (snapshot.empty) {
+            alert("該当する取引が見つかりません。");
+            transactionDetailsDiv.style.display = 'none';
+            currentFoundSaleId = null;
+            return;
+        }
+
+        // 通常、ticketNumberはユニークなはずだが、念のため最初のものを取る
+        const saleDoc = snapshot.docs[0];
+        currentFoundSaleId = saleDoc.id;
+        const saleData = saleDoc.data();
+
+        detailTicketNumberSpan.textContent = saleData.ticketNumber;
+        detailTimestampSpan.textContent = saleData.timestamp ? new Date(saleData.timestamp.seconds * 1000).toLocaleString() : 'N/A';
+        detailTotalAmountSpan.textContent = saleData.totalAmount;
+        detailStatusSpan.textContent = saleData.status || "completed"; // statusがなければcompleted扱い
+
+        detailItemsUl.innerHTML = '';
+        saleData.items.forEach(item => {
+            const li = document.createElement('li');
+            li.textContent = `${item.name} x ${item.quantity} (${item.price * item.quantity}円)`;
+            detailItemsUl.appendChild(li);
+        });
+
+        transactionDetailsDiv.style.display = 'block';
+        if (saleData.status !== "completed") {
+            refundTransactionButton.style.display = 'none'; // 既に処理済みなら返品ボタン非表示
+            alert(`この取引は既に「${saleData.status}」です。`);
+        } else {
+            refundTransactionButton.style.display = 'inline-block';
+        }
+
+    } catch (error) {
+        console.error("Error searching transaction: ", error);
+        alert("取引の検索中にエラーが発生しました。");
+        transactionDetailsDiv.style.display = 'none';
+        currentFoundSaleId = null;
+    }
+});
+
+refundTransactionButton.addEventListener('click', async () => {
+    if (!currentFoundSaleId) {
+        alert("返品対象の取引が選択されていません。");
+        return;
+    }
+    if (!confirm("この取引を返品処理しますか？")) {
+        return;
+    }
+
+    try {
+        await db.collection('sales').doc(currentFoundSaleId).update({
+            status: "refunded",
+            modifiedAt: firebase.firestore.FieldValue.serverTimestamp()
+            // 必要なら notes: "顧客都合による返品" なども追加
+        });
+        alert("取引を返品済みに更新しました。");
+        // UI更新
+        detailStatusSpan.textContent = "refunded";
+        refundTransactionButton.style.display = 'none';
+        currentFoundSaleId = null; // 処理後はクリア
+        searchTicketNumberInput.value = ''; // 入力フィールドもクリア
+
+    } catch (error) {
+        console.error("Error refunding transaction: ", error);
+        alert("返品処理中にエラーが発生しました。");
+    }
+});
     initialize();
 });

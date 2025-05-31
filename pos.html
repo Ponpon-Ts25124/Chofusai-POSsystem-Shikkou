@@ -7,6 +7,8 @@
     <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
+    <!-- pos.html のどこかに追加 -->
+    <a href="queue-display.html" target="_blank">お客様用 整理番号表示画面を開く</a>
     <div class="pos-container">
         <div class="products-area">
             <h2>商品選択</h2>
@@ -32,7 +34,25 @@
             </div>
         </div>
     </div>
-
+<!-- cart-area 内、queue-management の上あたりに追加 -->
+<div class="transaction-management">
+    <h3>取引管理 (返品/取消)</h3>
+    <div>
+        <label for="search-ticket-number">整理番号:</label>
+        <input type="number" id="search-ticket-number" placeholder="整理番号で検索">
+        <button id="search-transaction-button">検索</button>
+    </div>
+    <div id="transaction-details">
+        <h4>取引詳細</h4>
+        <p>整理番号: <span id="detail-ticket-number"></span></p>
+        <p>購入日時: <span id="detail-timestamp"></span></p>
+        <p>合計金額: <span id="detail-total-amount"></span> 円</p>
+        <ul id="detail-items"></ul>
+        <p>状態: <span id="detail-status"></span></p>
+        <button id="refund-transaction-button">この取引を返品する</button>
+        <button id="cancel-latest-transaction-button">最新の会計を取消</button> <!-- これは簡易的な取消用 -->
+    </div>
+</div>
     <!-- Firebase SDK (v8系) -->
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
