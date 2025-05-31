@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="refresh" content="300"> <!-- 5分おきに自動リフレッシュ (保険) -->
+    <title>整理番号案内</title>
+    <link rel="stylesheet" href="css/style.css"> <!-- POSと同じスタイルシートを流用可能 -->
+    <style>
+        /* このページ専用のスタイル */
+        body {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            background-color: #333;
+            color: white;
+        }
+        .queue-info {
+            background-color: #444;
+            padding: 40px;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.5);
+        }
+        .queue-info h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+        #serving-number {
+            font-size: 8em; /* 大きく表示 */
+            font-weight: bold;
+            color: #ffc107; /* 目立つ色 */
+            margin: 20px 0;
+            display: block;
+        }
+        #waiting-count, #last-issued-number {
+            font-size: 1.8em;
+            margin-top: 15px;
+        }
+    </style>
+</head>
+<body>
+    <div class="queue-info">
+        <h1>現在の呼び出し番号</h1>
+        <span id="serving-number">---</span>
+        <p id="waiting-count">現在の待ち人数: ---人</p>
+        <p id="last-issued-number">最新の発行番号: ---番</p>
+        <p style="margin-top: 30px; font-size: 0.9em;">この画面は自動で更新されます。</p>
+    </div>
+
+    <!-- Firebase SDK (v8系) -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+
+    <script src="js/firebase-config.js"></script>
+    <script src="js/queue-script.js"></script>
+</body>
+</html>
