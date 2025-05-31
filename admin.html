@@ -6,7 +6,16 @@
     <title>管理者ダッシュボード</title>
     <link rel="stylesheet" href="css/style.css">
     <style>
-        /* ... (既存のスタイル) ... */
+        /* ★★★ 重要 ★★★ */
+        /* ダッシュボードコンテンツをデフォルトで非表示にする */
+        /* JavaScriptでログイン状態が確認されるまで表示させない */
+        #dashboard-content {
+            display: none; /* JavaScriptで .hidden クラスを操作する前に確実に非表示 */
+        }
+        /* .hidden クラスは引き続きJavaScriptでの表示切り替えに使用 */
+        .hidden {
+            display: none !important;
+        }
         #login-container {
             width: 100%;
             max-width: 400px;
@@ -85,12 +94,12 @@
         <h1>管理者ログイン</h1>
         <div id="login-error"></div>
         <input type="email" id="email" placeholder="メールアドレス" required>
-        <h1>管理者ダッシュボード <button id="login-logout-button">ログアウト</button></h1>
+        <input type="password" id="password" placeholder="パスワード" required>
         <button id="login-button">ログイン</button>
     </div>
 
     <div id="dashboard-content" class="dashboard-container hidden"> <!-- 最初は非表示 -->
-        <h1>管理者ダッシュボード <button id="dashboard-logout-button">ログアウト</button></h1>
+        <h1>管理者ダッシュボード <button id="logout-button">ログアウト</button></h1>
             <span class="margin-horizontal">または</span>
         <div class="controls">
             <label for="date-selector">日付選択:</label>

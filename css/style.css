@@ -159,15 +159,5 @@ body {
 /* admin.html のログインコンテナがバナーに隠れないように調整 */
 #login-container {
     /* ... (既存の #login-container スタイル) ... */
-    margin-top: 100px; /* バナーの高さ + 少し余裕 */
-}
-
-/* dashboard-contentも同様に調整 */
-#dashboard-content.dashboard-container {
-    /* bodyにpadding-topがあるので、個別のmargin-topは不要になるかも。要調整 */
-}
-
-/* 必要に応じて、既存の .pos-container や .queue-info の margin-top も調整 */
-.pos-container, .queue-info, .dashboard-container {
-    /* margin-top: 20px;  <-- もし以前こういった指定があれば、bodyのpadding-topでカバーされるか確認 */
+    margin-top: 100%; /* バナーの高さ + 少し余裕 */
 }
