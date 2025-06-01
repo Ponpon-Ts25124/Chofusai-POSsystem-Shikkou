@@ -77,11 +77,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- UI制御: 期間セレクタ ---
     timeRangeSelector.addEventListener('change', () => {
+        const customRangePicker = document.getElementById('custom-range-picker'); // 再取得
         if (timeRangeSelector.value === 'custom_range') {
-            customRangePicker.classList.remove('hidden');
+            customRangePicker.classList.remove('hidden'); // hiddenクラスを削除して表示
             dateSelector.value = ''; // 日付指定をクリア
         } else {
-            customRangePicker.classList.add('hidden');
+            customRangePicker.classList.add('hidden'); // hiddenクラスを追加して非表示
             if (timeRangeSelector.value !== 'today' && timeRangeSelector.value !== 'last_3_hours') {
                  dateSelector.value = ''; // リアルタイム系以外は日付指定をクリア
             }

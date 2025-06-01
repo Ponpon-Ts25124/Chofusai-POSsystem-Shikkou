@@ -5,91 +5,19 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>管理者ダッシュボード</title>
     <link rel="stylesheet" href="css/style.css">
-    <style>
-        /* ★★★ 重要 ★★★ */
-        /* ダッシュボードコンテンツをデフォルトで非表示にする */
-        /* JavaScriptでログイン状態が確認されるまで表示させない */
-        #dashboard-content {
-            display: none; /* JavaScriptで .hidden クラスを操作する前に確実に非表示 */
-        }
-        /* .hidden クラスは引き続きJavaScriptでの表示切り替えに使用 */
-        .hidden {
-            display: none !important;
-        }
-        #login-container {
-            width: 100%;
-            max-width: 400px;
-            margin: 50px auto;
-            padding: 20px;
-            background-color: #fff;
-            border-radius: 8px;
-            box-shadow: 0 0 10px rgba(0,0,0,0.1);
-        }
-        #login-container h1 {
-            text-align: center;
-            margin-bottom: 20px;
-        }
-        #login-container input[type="email"],
-        #login-container input[type="password"] {
-            width: calc(100% - 22px);
-            padding: 10px;
-            margin-bottom: 15px;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-        }
-        #login-container button {
-            width: 100%;
-            padding: 10px;
-            background-color: #007bff;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-        }
-        #login-container button:hover {
-            background-color: #0056b3;
-        }
-        #logout-button {
-            float: right;
-            font-size: 0.7em;
-            padding: 5px 10px;
-        }
-        #dashboard-logout-button {
-            float: right;
-            font-size: 0.7em;
-            padding: 5px 10px;
-        }
-        #login-error {
-            color: red;
-            margin-bottom: 10px;
-            text-align: center;
-        }
-        .hidden {
-            display: none !important;
-        }
-        .margin-horizontal {
-            margin-left: 10px;
-            margin-right: 10px;
-        }
-        #custom-range-picker {
-            margin-top: 10px;
-        }
-        #refresh-data-button {
-            margin-left: 15px;
-            padding: 8px 12px;
-        }
-    </style>
+    <!-- <style> タグ内のCSSは style.css に移動 -->
 </head>
 <body>
     <header class="top-navigation-banner">
-    <nav>
-        <ul>
-            <li><a href="queue-display.html" id="nav-queue">整理番号画面</a></li>
-            <li><a href="pos.html" id="nav-pos">POS画面</a></li>
-            <li><a href="admin.html" id="nav-admin">管理者画面</a></li>
-        </ul>
-    </nav>
-</header>
+        <nav>
+            <ul>
+                <li><a href="queue-display.html" id="nav-queue">整理番号画面</a></li>
+                <li><a href="pos.html" id="nav-pos">POS画面</a></li>
+                <li><a href="admin.html" id="nav-admin">管理者画面</a></li>
+            </ul>
+        </nav>
+    </header>
+
     <div id="login-container">
         <h1>管理者ログイン</h1>
         <div id="login-error"></div>
@@ -98,55 +26,85 @@
         <button id="login-button">ログイン</button>
     </div>
 
-    <div id="dashboard-content" class="dashboard-container hidden"> <!-- 最初は非表示 -->
-        <h1>管理者ダッシュボード <button id="logout-button">ログアウト</button></h1>
-            <span class="margin-horizontal">または</span>
-        <div class="controls">
-            <label for="date-selector">日付選択:</label>
-            <input type="date" id="date-selector">
-            <span class="margin-horizontal">または</span>
-            <label for="time-range-selector">期間:</label>
-            <select id="time-range-selector">
-                <option value="all_time" selected>全期間</option>
-                <option value="today">本日 (リアルタイム)</option>
-            <div id="custom-range-picker" class="hidden">
+    <div id="dashboard-content" class="dashboard-container hidden">
+        <div class="dashboard-header">
+            <h1>管理者ダッシュボード</h1>
+            <button id="logout-button" class="logout-btn">ログアウト</button>
+        </div>
+
+        <div class="controls-section">
+            <div class="control-group">
+                <label for="date-selector">日付選択:</label>
+                <input type="date" id="date-selector">
+            </div>
+            <div class="control-group separator-text">
+                <span>または</span>
+            </div>
+            <div class="control-group">
+                <label for="time-range-selector">期間:</label>
+                <select id="time-range-selector">
+                    <option value="all_time" selected>全期間</option>
+                    <option value="today">本日 (リアルタイム)</option>
+                    <option value="last_3_hours">過去3時間 (リアルタイム)</option>
+                    <option value="custom_range">指定日範囲 (下記で選択)</option>
+                </select>
+            </div>
+            <div id="custom-range-picker" class="control-group custom-range-inputs hidden">
                 <label for="start-date">開始日:</label>
                 <input type="date" id="start-date">
-                <label for="end-date">終了日:</label>
-                <input type="date" id="end-date">
-            <button id="refresh-data-button">データ表示/更新</button>
-                <label for="end-date">終了日:</label>
+                <label for="end-date" class="end-date-label">終了日:</label>
                 <input type="date" id="end-date">
             </div>
-            <button id="refresh-data-button">データ表示/更新</button>
+            <div class="control-group">
+                <button id="refresh-data-button" class="refresh-btn">データ表示/更新</button>
+            </div>
         </div>
 
-        <h2>商品別 売上・返品状況 (金額ベース)</h2>
-        <div class="chart-container">
-            <canvas id="salesByProductChart"></canvas>
-        </div>
+        <div class="main-content-area">
+            <div class="charts-area">
+                <section class="chart-section">
+                    <h2>商品別 売上・返品状況 (金額ベース)</h2>
+                    <div class="chart-container">
+                        <canvas id="salesByProductChart"></canvas>
+                    </div>
+                </section>
 
-        <h2>時間帯別 売上・返品 推移 (選択期間の3時間ごと)</h2>
-        <div class="chart-container">
-            <canvas id="salesOverTimeChart"></canvas>
-        </div>
+                <section class="chart-section">
+                    <h2>時間帯別 売上・返品 推移 (選択期間の3時間ごと)</h2>
+                    <div class="chart-container">
+                        <canvas id="salesOverTimeChart"></canvas>
+                    </div>
+                </section>
+            </div>
 
-        <h2>現在の待ち状況 (参考)</h2>
-        <p>現在対応中: <span id="admin-serving-ticket">N/A</span></p>
-        <p>最新の発行番号: <span id="admin-last-issued-ticket">N/A</span></p>
-        <p>現在の待ち人数: <span id="admin-waiting-count">N/A</span> 人</p>
+            <aside class="sidebar-area">
+                <section class="queue-status-section">
+                    <h2>現在の待ち状況 (参考)</h2>
+                    <p>現在対応中: <span id="admin-serving-ticket">N/A</span></p>
+                    <p>最新の発行番号: <span id="admin-last-issued-ticket">N/A</span></p>
+                    <p>現在の待ち人数: <span id="admin-waiting-count">N/A</span> 人</p>
+                </section>
+            </aside>
+        </div>
     </div>
 
-    <!-- Firebase SDK -->
+    <!-- Firebase SDK とスクリプト -->
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script> <!-- Auth SDK追加 -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
-    <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script> <!-- date-fnsアダプタ追加 -->
-
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
 
     <script src="js/firebase-config.js"></script>
     <script src="js/admin-script.js"></script>
+    <script>
+        // アクティブリンク用のJavaScript (オプション)
+        document.addEventListener('DOMContentLoaded', function() {
+            const currentPage = window.location.pathname.split("/").pop();
+            if (currentPage === "admin.html") {
+                document.getElementById('nav-admin')?.classList.add('active');
+            }
+        });
+    </script>
 </body>
 </html>

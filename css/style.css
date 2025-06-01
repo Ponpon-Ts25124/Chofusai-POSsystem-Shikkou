@@ -161,3 +161,281 @@ body {
     /* ... (既存の #login-container スタイル) ... */
     margin-top: 100%; /* バナーの高さ + 少し余裕 */
 }
+/* --- グローバル & 基本スタイル --- */
+body {
+    font-family: sans-serif;
+    margin: 0;
+    background-color: #f0f0f0; /* ページ全体の背景色 */
+    padding-top: 70px; /* 上部ナビゲーションバナーの高さに応じて調整 */
+    line-height: 1.6;
+}
+
+/* --- 上部ナビゲーションバナー (既存のものを微調整する場合あり) --- */
+.top-navigation-banner {
+    background-color: #333;
+    padding: 15px 0;
+    width: 100%;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    text-align: center;
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 1000;
+    height: 60px; /* 高さを固定する場合 (padding-topと合わせる) */
+}
+/* ... (ナビゲーションバナーの ul, li, a スタイルは既存のものを活用) ... */
+.top-navigation-banner nav a.active {
+    background-color: #3e8e41; /* アクティブなリンクの色を少し濃く */
+}
+
+
+/* --- ログインコンテナ (既存のものを微調整する場合あり) --- */
+#login-container {
+    width: 100%;
+    max-width: 400px;
+    margin: 100px auto 50px auto; /* 上マージンを調整してバナーと被らないように */
+    padding: 30px;
+    background-color: #fff;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+#login-container h1 {
+    text-align: center;
+    margin-bottom: 25px;
+    font-size: 1.8em;
+    color: #333;
+}
+#login-container input[type="email"],
+#login-container input[type="password"] {
+    width: calc(100% - 24px); /* paddingを考慮 */
+    padding: 12px;
+    margin-bottom: 18px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 1em;
+}
+#login-container button {
+    width: 100%;
+    padding: 12px;
+    background-color: #007bff;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 1.1em;
+    transition: background-color 0.3s ease;
+}
+#login-container button:hover {
+    background-color: #0056b3;
+}
+#login-error {
+    color: red;
+    margin-bottom: 15px;
+    text-align: center;
+    min-height: 1.2em; /* エラーメッセージがないときも高さを確保 */
+}
+
+/* --- ダッシュボードコンテナ --- */
+.dashboard-container {
+    max-width: 90%; /* 画面幅に応じて広めに */
+    margin: 20px auto; /* 上下左右のマージン */
+    background-color: #fff;
+    padding: 25px;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+/* ダッシュボードヘッダー */
+.dashboard-header {
+    display: flex; /* Flexboxでタイトルとボタンを横並び */
+    justify-content: space-between; /* 両端に配置 */
+    align-items: center; /* 垂直方向中央揃え */
+    margin-bottom: 30px;
+    border-bottom: 2px solid #e0e0e0;
+    padding-bottom: 15px;
+}
+.dashboard-header h1 {
+    margin: 0; /* デフォルトのマージンをリセット */
+    font-size: 2em; /* タイトルを少し大きく */
+    color: #333;
+}
+.logout-btn { /* 汎用ボタンクラス */
+    padding: 8px 15px;
+    background-color: #dc3545;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.9em;
+    transition: background-color 0.3s ease;
+}
+.logout-btn:hover {
+    background-color: #c82333;
+}
+
+/* コントロールセクション */
+.controls-section {
+    display: flex; /* Flexboxでコントロールを横並び */
+    flex-wrap: wrap; /* 必要に応じて折り返す */
+    align-items: center; /* 垂直方向中央揃え */
+    gap: 15px; /* 各コントロールグループ間の隙間 */
+    margin-bottom: 30px;
+    padding: 15px;
+    background-color: #f9f9f9;
+    border-radius: 6px;
+    border: 1px solid #eee;
+}
+.control-group {
+    display: flex;
+    align-items: center;
+    gap: 8px; /* ラベルと入力フィールド間の隙間 */
+}
+.control-group label {
+    font-weight: bold;
+    color: #555;
+    white-space: nowrap; /* ラベルが改行しないように */
+}
+.control-group input[type="date"],
+.control-group select {
+    padding: 8px 10px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 0.9em;
+}
+.separator-text span {
+    color: #777;
+    font-style: italic;
+}
+/*.custom-range-inputs { #custom-range-picker にも適用 */
+    /* display: none; はJavaScriptで制御 */
+/*}*/
+.end-date-label {
+    margin-left: 10px; /* 開始日と終了日の間のスペース */
+}
+.refresh-btn { /* 汎用ボタンクラス */
+    padding: 9px 18px;
+    background-color: #28a745;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.95em;
+    transition: background-color 0.3s ease;
+}
+.refresh-btn:hover {
+    background-color: #218838;
+}
+
+
+/* メインコンテンツエリア (グラフとサイドバー) */
+.main-content-area {
+    display: flex; /* Flexboxでグラフエリアとサイドバーを横並び */
+    gap: 30px; /* グラフエリアとサイドバーの間の隙間 */
+}
+
+.charts-area {
+    flex: 3; /* グラフエリアが利用可能なスペースの多くを占める (例: 3/4) */
+    display: flex;
+    flex-direction: column; /* グラフを縦に並べる */
+    gap: 30px; /* グラフ間の隙間 */
+}
+
+.sidebar-area {
+    flex: 1; /* サイドバーが利用可能なスペースの残りを占める (例: 1/4) */
+    background-color: #f9f9f9;
+    padding: 20px;
+    border-radius: 6px;
+    border: 1px solid #eee;
+    min-width: 250px; /* サイドバーの最小幅 */
+}
+
+.chart-section h2,
+.queue-status-section h2 {
+    font-size: 1.5em; /* セクションタイトル */
+    color: #444;
+    margin-top: 0;
+    margin-bottom: 15px;
+    border-bottom: 1px solid #ddd;
+    padding-bottom: 8px;
+}
+
+.chart-container {
+    width: 100%;
+    position: relative;
+    height: 400px; /* グラフの高さ (前回の設定を維持または調整) */
+    /* min-height: 350px; */
+}
+
+.queue-status-section p {
+    margin-bottom: 10px;
+    font-size: 0.95em;
+}
+.queue-status-section span {
+    font-weight: bold;
+    color: #007bff;
+}
+
+
+/* --- ユーティリティクラス --- */
+.hidden {
+    display: none !important;
+}
+
+/* --- レスポンシブ対応 (簡易例) --- */
+@media (max-width: 1024px) { /* タブレットサイズなど */
+    .main-content-area {
+        flex-direction: column; /* 狭い画面では縦積みに変更 */
+    }
+    .charts-area, .sidebar-area {
+        flex: none; /* flex比率をリセット */
+        width: 100%;
+    }
+    .sidebar-area {
+        margin-top: 30px; /* 上の要素との間隔 */
+    }
+    .controls-section {
+        flex-direction: column; /* コントロールも縦積みに */
+        align-items: flex-start; /* 左寄せ */
+    }
+    .control-group {
+        width: 100%; /* 各コントロールグループを幅いっぱいに */
+        margin-bottom: 10px;
+    }
+    .control-group input[type="date"],
+    .control-group select {
+        width: calc(100% - 80px); /* ラベルの幅を考慮して調整 (おおよそ) */
+    }
+    .custom-range-inputs {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    .end-date-label {
+        margin-left: 0;
+        margin-top: 10px;
+    }
+}
+
+@media (max-width: 768px) { /* スマートフォンサイズなど */
+    .dashboard-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    .dashboard-header h1 {
+        margin-bottom: 10px;
+    }
+    .top-navigation-banner nav li {
+        margin: 0 5px; /* ナビボタン間のマージンを少し詰める */
+    }
+    .top-navigation-banner nav a {
+        padding: 8px 12px; /* ナビボタンのパディングを少し小さく */
+    }
+    body {
+        padding-top: 55px; /* バナーが小さくなるなら調整 */
+    }
+    .dashboard-container {
+        padding: 15px;
+    }
+    .charts-area, .sidebar-area, .controls-section {
+        padding: 15px;
+    }
+}
