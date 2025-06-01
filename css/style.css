@@ -160,8 +160,13 @@ body {
     color: #777;
     font-style: italic;
 }
-.custom-range-inputs { /* #custom-range-picker にも適用 */
-    /* display: none; はJavaScriptで制御 */
+/* #custom-range-picker へのスタイル (IDセレクタ) */
+#custom-range-picker {
+    /* display: none; は .hidden クラスで制御されるので、ここでの display 指定は不要 */
+    /* 必要であれば、flexコンテナとしての設定などを記述 */
+    display: flex; /* hiddenクラスが外れた時のデフォルトの表示形式 */
+    gap: 10px;     /* 子要素間の隙間 */
+    align-items: center;
 }
 .end-date-label {
     margin-left: 10px;
@@ -437,44 +442,64 @@ body {
 
 
 /* --- 整理番号表示画面 (queue-display.html) --- */
-.queue-info-body { /* queue-display.html の body に適用する想定 */
+body.queue-info-body { /* bodyに直接適用するクラス */
     display: flex;
     flex-direction: column;
-    justify-content: center;
+    /* justify-content: center; */ /* これがあると、コンテンツが少ない場合に中央に寄ってしまう */
     align-items: center;
     text-align: center;
-    background-color: #333; /* 背景色を濃いグレーに */
+    background-color: #333;
     color: white;
-    min-height: calc(100vh - 70px); /* バナーの高さを引いた分 */
+    min-height: 100vh; /* 画面全体の高さを確保 */
+    box-sizing: border-box; /* paddingを含めて高さを計算 */
+    padding-top: 70px; /* バナーの高さ分は必ず確保 */
 }
-.queue-info {
+
+.queue-info { /* mainタグにこのクラスを適用するか、divのままにする */
     background-color: #444;
-    padding: 40px;
+    padding: 30px; /* 少し小さく */
     border-radius: 10px;
     box-shadow: 0 0 20px rgba(0,0,0,0.5);
-    margin-top: 20px; /* バナーとの間に少しスペース */
+    margin-top: 30px; /* バナーからの距離 */
+    margin-bottom: 30px; /* 下部のマージン */
+    width: 90%; /* 幅を画面に合わせる */
+    max-width: 600px; /* 最大幅 */
 }
 .queue-info h1 {
-    font-size: 2.5em;
-    margin-bottom: 10px;
+    font-size: 2.2em; /* 少し調整 */
+    margin-top: 0; /* 上マージン削除 */
+    margin-bottom: 15px;
 }
 #serving-number {
-    font-size: 8em;
+    font-size: 7em; /* 少し調整 */
     font-weight: bold;
     color: #ffc107;
-    margin: 20px 0;
+    margin: 15px 0;
     display: block;
 }
 #waiting-count, #last-issued-number {
-    font-size: 1.8em;
-    margin-top: 15px;
+    font-size: 1.6em; /* 少し調整 */
+    margin-top: 12px;
 }
 .auto-refresh-note {
-    margin-top: 30px;
+    margin-top: 25px;
     font-size: 0.9em;
     color: #ccc;
 }
 
+/* レスポンシブ対応 (queue-display.html specific) */
+@media (max-width: 768px) {
+    body.queue-info-body {
+        padding-top: 100px; /* モバイルのナビゲーションバナーが縦長になることを考慮 */
+                            /* ナビゲーションバナーの高さに応じて調整 */
+    }
+    .queue-info {
+        padding: 20px;
+    }
+    .queue-info h1 { font-size: 1.8em; }
+    #serving-number { font-size: 5em; }
+    #waiting-count, #last-issued-number { font-size: 1.3em; }
+}
 
 /* --- 厨房画面 (kitchen-display.html) --- */
 .kitchen-body { /* kitchen-display.html の body に適用する想定 */
