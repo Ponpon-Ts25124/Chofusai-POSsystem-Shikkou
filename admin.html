@@ -59,6 +59,20 @@
                 <button id="refresh-data-button" class="refresh-btn">データ表示/更新</button>
             </div>
         </div>
+        
+            <!-- ★★★ 表示モード設定セクション追加 ★★★ -->
+        <section class="display-mode-section">
+            <h2>整理番号表示モード設定</h2>
+            <div class="control-group">
+                <label for="queue-display-mode">表示モード:</label>
+                <select id="queue-display-mode">
+                    <option value="simple">シンプル表示 (呼び出し番号のみ)</option>
+                    <option value="detailed">詳細表示 (作成中／お渡しできます)</option>
+                </select>
+                <button id="save-display-mode-button" class="refresh-btn">設定保存</button>
+            </div>
+            <p id="display-mode-status"></p>
+        </section>
 
         <div class="main-content-area">
             <div class="charts-area">
