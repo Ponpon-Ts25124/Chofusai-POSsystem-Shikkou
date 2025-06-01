@@ -98,16 +98,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- 厨房キューへの追加 ---
     async function addOrderToKitchenQueue(ticketNumber, items) {
+        console.log(`Attempting to add order ${ticketNumber} to kitchen queue with items:`, items); // ★デバッグ用ログ
         try {
             await db.collection('kitchenQueue').doc(String(ticketNumber)).set({
                 ticketNumber: parseInt(ticketNumber),
                 items: items,
-                orderTimestamp: firebase.firestore.FieldValue.serverTimestamp(),
+                orderTimestamp: firebase.firestore.FieldValue.serverTimestamp(), // ★正しいタイムスタンプ
                 status: "pending"
             });
-            console.log(`Order ${ticketNumber} added to kitchen queue.`);
+            console.log(`Order ${ticketNumber} successfully added to kitchen queue.`); // ★成功ログ
         } catch (error) {
-            console.error(`Error adding order ${ticketNumber} to kitchen queue: `, error);
+            console.error(`Error adding order ${ticketNumber} to kitchen queue: `, error); // ★エラーログ
         }
     }
 
@@ -125,16 +126,18 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-
+    // 会計処理 (`checkoutButton` のイベントリスナー内)
     checkoutButton?.addEventListener('click', async () => {
         if (cart.length === 0) {
             alert("カートが空です。");
             return;
         }
         const totalAmount = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
-        let newTicketNumber;
+        let newTicketNumber; // スコープを外に出す
         try {
+            console.log("Checkout process started..."); // ★デバッグ用ログ
             newTicketNumber = await db.runTransaction(async (transaction) => {
+                // ... (既存の整理券発行トランザクション) ...
                 const queueDoc = await transaction.get(queueStatusRef);
                 if (!queueDoc.exists) {
                     transaction.set(queueStatusRef, { lastIssuedTicket: 1, servingTicket: 0, waitingCount: 1 });
@@ -148,6 +151,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
                 return newLastTicket;
             });
+            console.log("New ticket number issued:", newTicketNumber); // ★デバッグ用ログ
 
             await db.collection('sales').add({
                 timestamp: firebase.firestore.FieldValue.serverTimestamp(),
@@ -157,14 +161,19 @@ document.addEventListener('DOMContentLoaded', () => {
                 totalAmount: totalAmount,
                 paymentMethod: "cash",
                 ticketNumber: newTicketNumber,
-                status: "completed" // 初期ステータス
+                status: "completed"
             });
+            console.log("Sales data added for ticket:", newTicketNumber); // ★デバッグ用ログ
 
             if (cart.length > 0 && newTicketNumber) {
                 const kitchenOrderItems = cart.map(item => ({
-                    productId: item.id, name: item.name, quantity: item.quantity
+                    productId: item.id,
+                    name: item.name,
+                    quantity: item.quantity
                 }));
-                await addOrderToKitchenQueue(newTicketNumber, kitchenOrderItems);
+                await addOrderToKitchenQueue(newTicketNumber, kitchenOrderItems); // 厨房リストに追加
+            } else {
+                console.warn("Cart was empty or newTicketNumber was not generated when trying to add to kitchen queue."); // ★警告ログ
             }
 
             alert(`会計完了。\n整理番号: ${newTicketNumber}\n合計: ${totalAmount}円`);
@@ -176,7 +185,7 @@ document.addEventListener('DOMContentLoaded', () => {
             alert("会計処理中にエラーが発生しました。");
         }
     });
-
+    
 
     // --- POS画面の呼び出し番号管理 ---
     queueStatusRef.onSnapshot(doc => {
