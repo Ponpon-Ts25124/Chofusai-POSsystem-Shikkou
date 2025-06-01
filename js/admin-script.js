@@ -112,8 +112,9 @@ document.addEventListener('DOMContentLoaded', () => {
             alert("表示モードの更新に失敗しました。");
         }
     });
-
+    // --- fetchDataAndRenderCharts 関数 ---
     async function fetchDataAndRenderCharts() {
+        console.log("fetchDataAndRenderCharts: Initiating data fetch and render..."); // ★デバッグログ
         try {
             let query = db.collection('sales').orderBy('timestamp', 'desc');
             const selectedDate = dateSelector?.value;
@@ -122,10 +123,11 @@ document.addEventListener('DOMContentLoaded', () => {
             let endTime = null;
             const now = new Date();
 
+            // 期間設定ロジック (変更なし、ただしnullチェックを強化)
             if (selectedDate) {
                 startTime = new Date(selectedDate); startTime.setHours(0, 0, 0, 0);
                 endTime = new Date(selectedDate); endTime.setHours(23, 59, 59, 999);
-            } else {
+            } else if (selectedRangeOption) { // selectedRangeOption が存在する場合のみ switch
                 switch (selectedRangeOption) {
                     case 'today':
                         startTime = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -138,49 +140,102 @@ document.addEventListener('DOMContentLoaded', () => {
                     case 'custom_range':
                         if (startDateInput?.value) { startTime = new Date(startDateInput.value); startTime.setHours(0,0,0,0); }
                         if (endDateInput?.value) { endTime = new Date(endDateInput.value); endTime.setHours(23,59,59,999); }
-                        if (startTime && endTime && startTime > endTime) { alert("開始日は終了日より前に。"); return; }
+                        if (startTime && endTime && startTime > endTime) { alert("開始日は終了日より前に設定してください。"); return; }
                         break;
-                    default: break;
+                    default: // all_time または未定義の場合
+                        break;
                 }
             }
+            console.log("fetchDataAndRenderCharts: Time range set - Start:", startTime, "End:", endTime); // ★デバッグログ
+
             if (startTime) query = query.where('timestamp', '>=', startTime);
             if (endTime) query = query.where('timestamp', '<=', endTime);
 
             const snapshot = await query.get();
             const salesData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            console.log("fetchDataAndRenderCharts: Fetched salesData count:", salesData.length); // ★デバッグログ
+            if (salesData.length > 0) console.log("fetchDataAndRenderCharts: First sale data example:", salesData[0]); // ★デバッグログ
 
+
+            // ★★★ Canvas要素の存在を保証する処理をここで行う ★★★
             prepareCanvasArea('salesByProductChart');
             prepareCanvasArea('salesOverTimeChart');
 
             if (salesData.length === 0) {
-                console.log("売上データが0件です。");
+                console.log("fetchDataAndRenderCharts: No sales data found for the period. Clearing charts."); // ★デバッグログ
                 clearChartsAndDisplayMessage("期間内に売上データがありません。");
-                return;
+                return; // これ以降のグラフ描画処理をスキップ
             }
-            renderSalesByProductChart(salesData);
-            renderSalesOverTimeChart(salesData, startTime, endTime);
+
+            console.log("fetchDataAndRenderCharts: Data found. Rendering charts..."); // ★デバッグログ
+            renderSalesByProductChart(salesData); // この関数は前回の完全版を使用
+            renderSalesOverTimeChart(salesData, startTime, endTime); // この関数は前回の完全版を使用
+
         } catch (error) {
-            console.error("Error fetching sales data: ", error);
-            alert("売上データの読み込み中にエラーが発生しました。");
-            clearChartsAndDisplayMessage("データの読み込みに失敗しました。");
+            console.error("fetchDataAndRenderCharts: Error during fetch or render: ", error); // ★デバッグログ
+            alert("売上データの読み込みまたは表示中にエラーが発生しました。");
+            clearChartsAndDisplayMessage(`データの処理に失敗しました: ${error.message}`);
         }
     }
 
+    // --- Canvas要素を準備する関数 ---
     function prepareCanvasArea(canvasId) {
-        const container = document.getElementById(canvasId)?.parentElement;
-        if (container && !document.getElementById(canvasId)) {
-            container.innerHTML = `<canvas id="${canvasId}"></canvas>`;
+        const chartContainer = document.getElementById(canvasId)?.parentElement; // .chart-container を想定
+        if (chartContainer) {
+            // 既存のcanvasがあれば何もしない、なければ作成する
+            if (!document.getElementById(canvasId)) {
+                console.log(`prepareCanvasArea: Canvas with ID ${canvasId} not found. Creating it.`); // ★デバッグログ
+                const newCanvas = document.createElement('canvas');
+                newCanvas.id = canvasId;
+                // newCanvas.style.width = '100%'; // Chart.jsが制御するので不要な場合が多い
+                // newCanvas.style.height = '100%';
+                chartContainer.innerHTML = ''; // コンテナを一旦クリア
+                chartContainer.appendChild(newCanvas);
+            } else {
+                console.log(`prepareCanvasArea: Canvas with ID ${canvasId} already exists.`); // ★デバッグログ
+            }
+        } else {
+            console.error(`prepareCanvasArea: Parent container for ${canvasId} not found.`); // ★デバッグログ
         }
     }
 
+    // --- チャートをクリアしてメッセージを表示する関数 ---
     function clearChartsAndDisplayMessage(message) {
-        const productChartContainer = document.getElementById('salesByProductChart')?.parentElement;
-        const timeChartContainer = document.getElementById('salesOverTimeChart')?.parentElement;
-        if (salesByProductChartInstance) { salesByProductChartInstance.destroy(); salesByProductChartInstance = null; }
-        if (salesOverTimeChartInstance) { salesOverTimeChartInstance.destroy(); salesOverTimeChartInstance = null; }
-        if (productChartContainer) productChartContainer.innerHTML = `<p class="no-data-message">${message}</p>`;
-        if (timeChartContainer) timeChartContainer.innerHTML = `<p class="no-data-message">${message}</p>`;
+        console.log(`clearChartsAndDisplayMessage: Clearing charts and displaying message: "${message}"`); // ★デバッグログ
+        const productChartCanvas = document.getElementById('salesByProductChart');
+        const timeChartCanvas = document.getElementById('salesOverTimeChart');
+
+        if (salesByProductChartInstance) {
+            salesByProductChartInstance.destroy();
+            salesByProductChartInstance = null;
+        }
+        if (productChartCanvas && productChartCanvas.getContext('2d')) { // canvas要素が存在し、コンテキストも取得できる場合
+            const ctx = productChartCanvas.getContext('2d');
+            ctx.clearRect(0, 0, productChartCanvas.width, productChartCanvas.height);
+            // メッセージをcanvasに描画する代わりに、親コンテナにpタグで表示する方が簡単で見栄えも良い
+        }
+        if (productChartCanvas?.parentElement) { // 親コンテナがあればメッセージ表示
+            productChartCanvas.parentElement.innerHTML = `<p class="no-data-message">${message}</p>`;
+        }
+
+
+        if (salesOverTimeChartInstance) {
+            salesOverTimeChartInstance.destroy();
+            salesOverTimeChartInstance = null;
+        }
+        if (timeChartCanvas && timeChartCanvas.getContext('2d')) {
+            const ctx = timeChartCanvas.getContext('2d');
+            ctx.clearRect(0, 0, timeChartCanvas.width, timeChartCanvas.height);
+        }
+        if (timeChartCanvas?.parentElement) {
+            timeChartCanvas.parentElement.innerHTML = `<p class="no-data-message">${message}</p>`;
+        }
     }
+
+    // renderSalesByProductChart と renderSalesOverTimeChart は前回の完全版を使用してください。
+    // 特に、関数の冒頭で getContext('2d') を行い、null チェックをすることが重要です。
+    // ... (renderSalesByProductChart と renderSalesOverTimeChart の完全なコードをここに配置) ...
+    // ※ 前回の回答の「js/admin-script.js の修正箇所 (グラフ描画関数)」を参照
 
  // --- 売上商品別グラフ ---
     function renderSalesByProductChart(salesData) {
