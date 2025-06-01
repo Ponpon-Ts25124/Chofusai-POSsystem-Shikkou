@@ -44,12 +44,12 @@
                 <label for="time-range-selector">期間:</label>
                 <select id="time-range-selector">
                     <option value="all_time" selected>全期間</option>
-                    <option value="today">本日 (リアルタイム)</option>
+                    <option value="today">本日</option>
                     <option value="last_3_hours">過去3時間</option>
                     <option value="custom_range">指定日範囲</option>
                 </select>
             </div>
-            <div id="custom-range-picker" class="control-group custom-range-inputs hidden">
+            <div id="custom-range-picker" class="control-group hidden">
                 <label for="start-date">開始日:</label>
                 <input type="date" id="start-date">
                 <label for="end-date" class="end-date-label">終了日:</label>
@@ -59,20 +59,15 @@
                 <button id="refresh-data-button" class="refresh-btn">データ表示/更新</button>
             </div>
         </div>
-        
-            <!-- ★★★ 表示モード設定セクション追加 ★★★ -->
-        <section class="display-mode-section">
-            <h2>整理番号表示モード設定</h2>
-            <div class="control-group">
-                <label for="queue-display-mode">表示モード:</label>
-                <select id="queue-display-mode">
-                    <option value="simple">シンプル表示 (呼び出し番号のみ)</option>
-                    <option value="detailed">詳細表示 (作成中／お渡しできます)</option>
-                </select>
-                <button id="save-display-mode-button" class="refresh-btn">設定保存</button>
-            </div>
-            <p id="display-mode-status"></p>
-        </section>
+
+         <div class="display-mode-selector">
+            <label for="display-mode-select">整理番号画面 表示モード:</label>
+            <select id="display-mode-select">
+                <option value="normal">通常表示</option>
+                <option value="dual">2段階表示</option>
+            </select>
+            <button id="save-display-mode-button" class="refresh-btn">表示モード保存</button>
+        </div>
 
         <div class="main-content-area">
             <div class="charts-area">

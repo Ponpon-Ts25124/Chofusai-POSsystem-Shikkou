@@ -3,11 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <!-- <meta http-equiv="refresh" content="300">  ★★★ この行をコメントアウトまたは削除 ★★★ -->
     <title>整理番号案内</title>
     <link rel="stylesheet" href="css/style.css">
 </head>
-<body class="queue-info-body"> <!-- ★★★ このクラスが適用されているか ★★★ -->
+<body class="queue-info-body">
     <header class="top-navigation-banner">
         <nav>
             <ul>
@@ -19,11 +18,29 @@
         </nav>
     </header>
 
-    <main class="queue-info"> <!-- ★★★ メインコンテンツを main タグで囲む（セマンティックHTML） ★★★ -->
+    <main id="normal-display" class="queue-info">
         <h1>現在の呼び出し番号</h1>
         <span id="serving-number">---</span>
         <p id="waiting-count">現在の待ち人数: ---人</p>
         <p id="last-issued-number">最新の発行番号: ---番</p>
+        <p class="auto-refresh-note">この画面は自動で更新されます。</p>
+    </main>
+
+    <main id="dual-display" class="hidden">
+        <div class="dual-display-container">
+            <section class="status-column">
+                <h2>ただいま作成中</h2>
+                <ul id="making-list" class="ticket-list">
+                    <!-- 作成中番号 -->
+                </ul>
+            </section>
+            <section class="status-column">
+                <h2>まもなくお渡しできます</h2>
+                <ul id="ready-list" class="ticket-list">
+                    <!-- 受取待ち番号 -->
+                </ul>
+            </section>
+        </div>
         <p class="auto-refresh-note">この画面は自動で更新されます。</p>
     </main>
 

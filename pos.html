@@ -22,14 +22,14 @@
         <div class="products-area">
             <h2>商品選択</h2>
             <div id="product-list">
-                <!-- 商品ボタンがここにJavaScriptで追加される -->
+                <!-- 商品ボタン -->
             </div>
         </div>
 
         <div class="cart-area">
             <h2>カート</h2>
             <ul id="cart-items">
-                <!-- カート内商品がここに表示される -->
+                <!-- カート内商品 -->
             </ul>
             <div class="cart-summary">
                 <p>合計金額: <span id="total-amount">0</span> 円</p>
@@ -37,13 +37,13 @@
                 <button id="clear-cart-button">クリア</button>
             </div>
 
-            <div class="queue-management"> <!-- POS画面の呼び出し番号表示 -->
+            <div class="queue-management">
                 <h3>呼び出し状況</h3>
                 <p>現在対応中: <span id="serving-ticket-admin">N/A</span></p>
                 <button id="next-customer-button">次の番号へ</button>
             </div>
 
-            <div class="ticket-management-area"> <!-- 整理番号操作 -->
+            <div class="ticket-management-area">
                 <h3>整理券 操作</h3>
                 <div class="current-ticket-info">
                     <p>最新発行番号: <span id="pos-latest-ticket">N/A</span></p>
@@ -53,7 +53,7 @@
                 </div>
             </div>
 
-            <div class="transaction-management"> <!-- 返品/取消 -->
+            <div class="transaction-management">
                 <h3>取引管理 (返品/会計直後の取消)</h3>
                 <div>
                     <label for="search-ticket-number">整理番号で検索(返品用):</label>
@@ -74,7 +74,6 @@
         </div>
     </div>
 
-    <!-- 整理番号操作モーダル -->
     <div id="ticket-options-modal" class="modal hidden">
         <div class="modal-content">
             <span class="close-modal-button">×</span>

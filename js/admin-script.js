@@ -1,6 +1,5 @@
 // js/admin-script.js
 document.addEventListener('DOMContentLoaded', () => {
-    // auth, db は firebase-config.js でグローバルに定義されている前提
     if (typeof auth === 'undefined' || typeof db === 'undefined') {
         console.error("Firebase auth or db is not defined. Check firebase-config.js");
         alert("Firebaseの初期設定エラーです。");
@@ -26,6 +25,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const adminLastIssuedTicketSpan = document.getElementById('admin-last-issued-ticket');
     const adminWaitingCountSpan = document.getElementById('admin-waiting-count');
 
+    // 表示モード関連
+    const displayModeSelect = document.getElementById('display-mode-select');
+    const saveDisplayModeButton = document.getElementById('save-display-mode-button');
+    const queueStatusRefForAdminDisplayMode = db.collection('queue').doc('currentStatus');
+
+
     let salesByProductChartInstance = null;
     let salesOverTimeChartInstance = null;
 
@@ -33,13 +38,13 @@ document.addEventListener('DOMContentLoaded', () => {
         if (user) {
             if(loginContainer) loginContainer.classList.add('hidden');
             if(dashboardContent) {
-                dashboardContent.style.display = 'block'; // または 'flex' など元のスタイル
+                dashboardContent.style.display = 'block';
                 dashboardContent.classList.remove('hidden');
             }
             initializeDashboard();
         } else {
             if(loginContainer) {
-                loginContainer.style.display = 'block'; // 表示を確実にする
+                loginContainer.style.display = 'block';
                 loginContainer.classList.remove('hidden');
             }
             if(dashboardContent) {
@@ -94,6 +99,20 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    saveDisplayModeButton?.addEventListener('click', async () => {
+        if (!displayModeSelect) return;
+        const selectedMode = displayModeSelect.value;
+        try {
+            await queueStatusRefForAdminDisplayMode.update({
+                displayMode: selectedMode
+            });
+            alert(`表示モードを「${selectedMode === "dual" ? "2段階表示" : "通常表示"}」に更新しました。`);
+        } catch (error) {
+            console.error("Error updating display mode: ", error);
+            alert("表示モードの更新に失敗しました。");
+        }
+    });
+
     async function fetchDataAndRenderCharts() {
         try {
             let query = db.collection('sales').orderBy('timestamp', 'desc');
@@ -121,7 +140,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         if (endDateInput?.value) { endTime = new Date(endDateInput.value); endTime.setHours(23,59,59,999); }
                         if (startTime && endTime && startTime > endTime) { alert("開始日は終了日より前に。"); return; }
                         break;
-                    default: break; // all_time
+                    default: break;
                 }
             }
             if (startTime) query = query.where('timestamp', '>=', startTime);
@@ -130,10 +149,8 @@ document.addEventListener('DOMContentLoaded', () => {
             const snapshot = await query.get();
             const salesData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
-            // グラフ描画エリアの準備 (canvasがメッセージで置き換わっている場合を考慮)
             prepareCanvasArea('salesByProductChart');
             prepareCanvasArea('salesOverTimeChart');
-
 
             if (salesData.length === 0) {
                 console.log("売上データが0件です。");
@@ -151,11 +168,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function prepareCanvasArea(canvasId) {
         const container = document.getElementById(canvasId)?.parentElement;
-        if (container && !document.getElementById(canvasId)) { // canvasが存在しない場合
+        if (container && !document.getElementById(canvasId)) {
             container.innerHTML = `<canvas id="${canvasId}"></canvas>`;
         }
     }
-
 
     function clearChartsAndDisplayMessage(message) {
         const productChartContainer = document.getElementById('salesByProductChart')?.parentElement;
@@ -177,13 +193,13 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
         const productSales = {};
-        salesData.forEach(sale => { /* ... (既存のデータ整形) ... */
+        salesData.forEach(sale => {
             if (!sale.items) return;
             sale.items.forEach(item => {
                 if (!productSales[item.productId]) {
                     productSales[item.productId] = { name: item.name, salesAmount: 0, refundAmount: 0 };
                 }
-                if (sale.status === 'completed' || sale.status === 'served') { // servedも売上としてカウント
+                if (sale.status === 'completed' || sale.status === 'served') {
                     productSales[item.productId].salesAmount += item.price * item.quantity;
                 } else if (sale.status === 'refunded') {
                     productSales[item.productId].refundAmount += item.price * item.quantity;
@@ -194,9 +210,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const salesAmounts = Object.values(productSales).map(p => p.salesAmount);
         const refundAmounts = Object.values(productSales).map(p => p.refundAmount);
         if (salesByProductChartInstance) salesByProductChartInstance.destroy();
-        salesByProductChartInstance = new Chart(salesByProductCtx, { /* ... (既存のChart.js設定) ... */
-            type: 'bar', data: { labels: labels, datasets: [ { label: '売上金額 (円)', data: salesAmounts, backgroundColor: 'rgba(75, 192, 192, 0.7)' }, { label: '返品金額 (円)', data: refundAmounts, backgroundColor: 'rgba(255, 99, 132, 0.7)' } ] }, options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, title: { display: true, text: '金額 (円)' } }, x: { title: { display: true, text: '商品' } } }, plugins: { tooltip: { callbacks: { label: function(context) { let label = context.dataset.label || ''; if (label) { label += ': '; } if (context.parsed.y !== null) { label += new Intl.NumberFormat('ja-JP', { style: 'currency', currency: 'JPY' }).format(context.parsed.y); } return label; } } } } }
-        });
+        salesByProductChartInstance = new Chart(salesByProductCtx, { type: 'bar', data: { labels: labels, datasets: [ { label: '売上金額 (円)', data: salesAmounts, backgroundColor: 'rgba(75, 192, 192, 0.7)' }, { label: '返品金額 (円)', data: refundAmounts, backgroundColor: 'rgba(255, 99, 132, 0.7)' } ] }, options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, title: { display: true, text: '金額 (円)' } }, x: { title: { display: true, text: '商品' } } }, plugins: { tooltip: { callbacks: { label: function(context) { let label = context.dataset.label || ''; if (label) { label += ': '; } if (context.parsed.y !== null) { label += new Intl.NumberFormat('ja-JP', { style: 'currency', currency: 'JPY' }).format(context.parsed.y); } return label; } } } } } });
     }
 
     function renderSalesOverTimeChart(salesData, overallStartTime, overallEndTime) {
@@ -212,7 +226,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const salesByTimeSlot = {}; const slotHours = 3;
         let chartStartTime, chartEndTime;
         if (overallStartTime && overallEndTime) { chartStartTime = new Date(overallStartTime); chartEndTime = new Date(overallEndTime); }
-        else if (salesData.length > 0) { const timestamps = salesData.map(s => s.timestamp.toDate().getTime()); chartStartTime = new Date(Math.min(...timestamps)); chartEndTime = new Date(Math.max(...timestamps)); }
+        else if (salesData.length > 0) { const timestamps = salesData.filter(s=>s.timestamp && s.timestamp.toDate).map(s => s.timestamp.toDate().getTime()); if(timestamps.length === 0){ chartStartTime = new Date(); chartStartTime.setHours(0,0,0,0); chartEndTime = new Date(); chartEndTime.setHours(23,59,59,999); } else { chartStartTime = new Date(Math.min(...timestamps)); chartEndTime = new Date(Math.max(...timestamps));}  }
         else { chartStartTime = new Date(); chartStartTime.setHours(0,0,0,0); chartEndTime = new Date(); chartEndTime.setHours(23,59,59,999); }
         chartStartTime.setHours(Math.floor(chartStartTime.getHours() / slotHours) * slotHours, 0, 0, 0);
         const labels = []; let currentSlotStart = new Date(chartStartTime);
@@ -221,14 +235,14 @@ document.addEventListener('DOMContentLoaded', () => {
             labels.push(slotKey); salesByTimeSlot[slotKey] = { salesAmount: 0, refundAmount: 0 };
             currentSlotStart.setHours(currentSlotStart.getHours() + slotHours);
         }
-        salesData.forEach(sale => { /* ... (既存のデータ整形) ... */
+        salesData.forEach(sale => {
             if (!sale.timestamp || !sale.timestamp.toDate) return;
             const saleTime = sale.timestamp.toDate();
             const slotStartHour = Math.floor(saleTime.getHours() / slotHours) * slotHours;
             const slotKeyDate = new Date(saleTime); slotKeyDate.setHours(slotStartHour, 0, 0, 0);
             const slotKey = `${slotKeyDate.getFullYear()}-${String(slotKeyDate.getMonth() + 1).padStart(2, '0')}-${String(slotKeyDate.getDate()).padStart(2, '0')} ${String(slotKeyDate.getHours()).padStart(2, '0')}:00`;
             if (salesByTimeSlot[slotKey]) {
-                let transactionAmount = 0; sale.items.forEach(item => transactionAmount += item.price * item.quantity);
+                let transactionAmount = 0; if(sale.items && sale.items.forEach) sale.items.forEach(item => transactionAmount += item.price * item.quantity);
                 if (sale.status === 'completed' || sale.status === 'served') { salesByTimeSlot[slotKey].salesAmount += transactionAmount; }
                 else if (sale.status === 'refunded') { salesByTimeSlot[slotKey].refundAmount += transactionAmount; }
             }
@@ -236,13 +250,11 @@ document.addEventListener('DOMContentLoaded', () => {
         const salesAmounts = labels.map(key => salesByTimeSlot[key] ? salesByTimeSlot[key].salesAmount : 0);
         const refundAmounts = labels.map(key => salesByTimeSlot[key] ? salesByTimeSlot[key].refundAmount : 0);
         if (salesOverTimeChartInstance) salesOverTimeChartInstance.destroy();
-        salesOverTimeChartInstance = new Chart(salesOverTimeCtx, { /* ... (既存のChart.js設定) ... */
-            type: 'bar', data: { labels: labels, datasets: [ { label: '総売上金額 (円)', data: salesAmounts, backgroundColor: 'rgba(54, 162, 235, 0.7)' }, { label: '総返品金額 (円)', data: refundAmounts, backgroundColor: 'rgba(255, 159, 64, 0.7)' } ] }, options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, title: { display: true, text: '金額 (円)' } }, x: { title: { display: true, text: '時間帯 (3時間ごと)' } } }, plugins: { tooltip: { mode: 'index', intersect: false } } }
-        });
+        salesOverTimeChartInstance = new Chart(salesOverTimeCtx, { type: 'bar', data: { labels: labels, datasets: [ { label: '総売上金額 (円)', data: salesAmounts, backgroundColor: 'rgba(54, 162, 235, 0.7)' }, { label: '総返品金額 (円)', data: refundAmounts, backgroundColor: 'rgba(255, 159, 64, 0.7)' } ] }, options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, title: { display: true, text: '金額 (円)' } }, x: { title: { display: true, text: '時間帯 (3時間ごと)' } } }, plugins: { tooltip: { mode: 'index', intersect: false } } } });
     }
 
     function displayQueueStatus() {
-        const queueStatusRef = db.collection('queue').doc('currentStatus');
+        const queueStatusRef = db.collection('queue').doc('currentStatus'); // ローカルで再定義
         queueStatusRef.onSnapshot(doc => {
             if(!adminServingTicketSpan || !adminLastIssuedTicketSpan || !adminWaitingCountSpan) return;
             if (doc.exists) {
@@ -262,9 +274,16 @@ document.addEventListener('DOMContentLoaded', () => {
         if (typeof firebase === 'undefined' || typeof db === 'undefined') { console.error("Firebase or DB not initialized."); return; }
         const today = new Date().toISOString().split('T')[0];
         if(dateSelector) dateSelector.value = today;
-        if(timeRangeSelector) timeRangeSelector.value = 'today'; // デフォルトを今日に
+        if(timeRangeSelector) timeRangeSelector.value = 'today';
+
+        queueStatusRefForAdminDisplayMode.get().then(doc => {
+            if (doc.exists && displayModeSelect) {
+                const currentMode = doc.data().displayMode || "normal";
+                displayModeSelect.value = currentMode;
+            }
+        }).catch(err => console.error("Error fetching current display mode for admin:", err));
+
         fetchDataAndRenderCharts();
         displayQueueStatus();
     }
-    // onAuthStateChanged内で初期化されるので、ここでの直接呼び出しは不要
 });
