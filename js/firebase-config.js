@@ -9,5 +9,8 @@
   };
 
   // Firebaseを初期化
-  firebase.initializeApp(firebaseConfig);
-  const db = firebase.firestore(); //Firestoreインスタンスを取得
+  if (!firebase.apps.length) {
+      firebase.initializeApp(firebaseConfig);
+  }
+  const db = firebase.firestore();
+  const auth = firebase.auth(); // authもここで定義しておくと他で使いやすい

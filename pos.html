@@ -3,20 +3,21 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>調布祭POSレジ</title>
+    <title>文化祭POSレジ</title>
     <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
     <header class="top-navigation-banner">
-    <nav>
-        <ul>
-            <li><a href="queue-display.html" id="nav-queue">整理番号画面</a></li>
-            <li><a href="pos.html" id="nav-pos">POS画面</a></li>
-            <li><a href="admin.html" id="nav-admin">管理者画面</a></li>
-        </ul>
-    </nav>
-</header>
-    <!-- pos.html のどこかに追加 -->
+        <nav>
+            <ul>
+                <li><a href="queue-display.html" id="nav-queue">整理番号画面</a></li>
+                <li><a href="pos.html" id="nav-pos">POS画面</a></li>
+                <li><a href="kitchen-display.html" id="nav-kitchen">厨房画面</a></li>
+                <li><a href="admin.html" id="nav-admin">管理者画面</a></li>
+            </ul>
+        </nav>
+    </header>
+
     <div class="pos-container">
         <div class="products-area">
             <h2>商品選択</h2>
@@ -35,37 +36,66 @@
                 <button id="checkout-button">会計する</button>
                 <button id="clear-cart-button">クリア</button>
             </div>
-            <div class="queue-management">
-                <h3>整理券管理</h3>
+
+            <div class="queue-management"> <!-- POS画面の呼び出し番号表示 -->
+                <h3>呼び出し状況</h3>
                 <p>現在対応中: <span id="serving-ticket-admin">N/A</span></p>
                 <button id="next-customer-button">次の番号へ</button>
             </div>
+
+            <div class="ticket-management-area"> <!-- 整理番号操作 -->
+                <h3>整理券 操作</h3>
+                <div class="current-ticket-info">
+                    <p>最新発行番号: <span id="pos-latest-ticket">N/A</span></p>
+                    <label for="ticket-number-input">操作対象番号:</label>
+                    <input type="number" id="ticket-number-input" placeholder="番号入力">
+                    <button id="open-ticket-options-button">番号操作</button>
+                </div>
+            </div>
+
+            <div class="transaction-management"> <!-- 返品/取消 -->
+                <h3>取引管理 (返品/会計直後の取消)</h3>
+                <div>
+                    <label for="search-ticket-number">整理番号で検索(返品用):</label>
+                    <input type="number" id="search-ticket-number" placeholder="番号入力">
+                    <button id="search-transaction-button">検索</button>
+                </div>
+                <div id="transaction-details" class="hidden">
+                    <h4>取引詳細</h4>
+                    <p>整理番号: <span id="detail-ticket-number"></span></p>
+                    <p>購入日時: <span id="detail-timestamp"></span></p>
+                    <p>合計金額: <span id="detail-total-amount"></span> 円</p>
+                    <ul id="detail-items"></ul>
+                    <p>状態: <span id="detail-status"></span></p>
+                    <button id="refund-transaction-button" class="hidden">この取引を返品する</button>
+                </div>
+                <button id="cancel-latest-transaction-button">最新の会計を取消</button>
+            </div>
         </div>
     </div>
-<!-- cart-area 内、queue-management の上あたりに追加 -->
-<div class="transaction-management">
-    <h3>取引管理 (返品/取消)</h3>
-    <div>
-        <label for="search-ticket-number">整理番号:</label>
-        <input type="number" id="search-ticket-number" placeholder="整理番号で検索">
-        <button id="search-transaction-button">検索</button>
+
+    <!-- 整理番号操作モーダル -->
+    <div id="ticket-options-modal" class="modal hidden">
+        <div class="modal-content">
+            <span class="close-modal-button">×</span>
+            <h4>整理番号 <span id="modal-ticket-number-display"></span> の操作</h4>
+            <button id="modal-option-cancel-order">注文取消</button>
+            <button id="modal-option-mark-served">受取済</button>
+            <button id="modal-option-back">戻る</button>
+        </div>
     </div>
-    <div id="transaction-details">
-        <h4>取引詳細</h4>
-        <p>整理番号: <span id="detail-ticket-number"></span></p>
-        <p>購入日時: <span id="detail-timestamp"></span></p>
-        <p>合計金額: <span id="detail-total-amount"></span> 円</p>
-        <ul id="detail-items"></ul>
-        <p>状態: <span id="detail-status"></span></p>
-        <button id="refund-transaction-button">この取引を返品する</button>
-        <button id="cancel-latest-transaction-button">最新の会計を取消</button> <!-- これは簡易的な取消用 -->
-    </div>
-</div>
-    <!-- Firebase SDK (v8系) -->
+
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
-
     <script src="js/firebase-config.js"></script>
     <script src="js/pos-script.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const currentPage = window.location.pathname.split("/").pop();
+            if (currentPage === "pos.html" || currentPage === "") {
+                document.getElementById('nav-pos')?.classList.add('active');
+            }
+        });
+    </script>
 </body>
 </html>
