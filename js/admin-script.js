@@ -182,77 +182,228 @@ document.addEventListener('DOMContentLoaded', () => {
         if (timeChartContainer) timeChartContainer.innerHTML = `<p class="no-data-message">${message}</p>`;
     }
 
+ // --- 売上商品別グラフ ---
     function renderSalesByProductChart(salesData) {
         const salesByProductCtx = document.getElementById('salesByProductChart')?.getContext('2d');
-        if (!salesByProductCtx) return;
+        if (!salesByProductCtx) {
+            console.warn("renderSalesByProductChart: Canvas context not found.");
+            return;
+        }
+
         if (salesData.length === 0) {
-            if (salesByProductChartInstance) salesByProductChartInstance.destroy();
+            if (salesByProductChartInstance) {
+                salesByProductChartInstance.destroy();
+                salesByProductChartInstance = null; // インスタンスをクリア
+            }
             salesByProductCtx.clearRect(0, 0, salesByProductCtx.canvas.width, salesByProductCtx.canvas.height);
-            salesByProductCtx.font = "16px Arial"; salesByProductCtx.fillStyle = "#777"; salesByProductCtx.textAlign = "center";
+            salesByProductCtx.font = "16px Arial";
+            salesByProductCtx.fillStyle = "#777";
+            salesByProductCtx.textAlign = "center";
             salesByProductCtx.fillText("該当データなし", salesByProductCtx.canvas.width / 2, salesByProductCtx.canvas.height / 2);
             return;
         }
+
         const productSales = {};
         salesData.forEach(sale => {
-            if (!sale.items) return;
+            if (!sale.items || !Array.isArray(sale.items)) return;
             sale.items.forEach(item => {
                 if (!productSales[item.productId]) {
-                    productSales[item.productId] = { name: item.name, salesAmount: 0, refundAmount: 0 };
+                    productSales[item.productId] = { name: item.name || '商品名不明', salesAmount: 0, refundAmount: 0 };
                 }
+                // 'served' も売上としてカウントする
                 if (sale.status === 'completed' || sale.status === 'served') {
-                    productSales[item.productId].salesAmount += item.price * item.quantity;
+                    productSales[item.productId].salesAmount += (item.price || 0) * (item.quantity || 0);
                 } else if (sale.status === 'refunded') {
-                    productSales[item.productId].refundAmount += item.price * item.quantity;
+                    productSales[item.productId].refundAmount += (item.price || 0) * (item.quantity || 0);
                 }
             });
         });
+
         const labels = Object.values(productSales).map(p => p.name);
         const salesAmounts = Object.values(productSales).map(p => p.salesAmount);
         const refundAmounts = Object.values(productSales).map(p => p.refundAmount);
-        if (salesByProductChartInstance) salesByProductChartInstance.destroy();
-        salesByProductChartInstance = new Chart(salesByProductCtx, { type: 'bar', data: { labels: labels, datasets: [ { label: '売上金額 (円)', data: salesAmounts, backgroundColor: 'rgba(75, 192, 192, 0.7)' }, { label: '返品金額 (円)', data: refundAmounts, backgroundColor: 'rgba(255, 99, 132, 0.7)' } ] }, options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, title: { display: true, text: '金額 (円)' } }, x: { title: { display: true, text: '商品' } } }, plugins: { tooltip: { callbacks: { label: function(context) { let label = context.dataset.label || ''; if (label) { label += ': '; } if (context.parsed.y !== null) { label += new Intl.NumberFormat('ja-JP', { style: 'currency', currency: 'JPY' }).format(context.parsed.y); } return label; } } } } } });
+
+        if (salesByProductChartInstance) {
+            salesByProductChartInstance.destroy();
+        }
+        salesByProductChartInstance = new Chart(salesByProductCtx, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [
+                    {
+                        label: '売上金額 (円)',
+                        data: salesAmounts,
+                        backgroundColor: 'rgba(75, 192, 192, 0.7)',
+                        borderColor: 'rgba(75, 192, 192, 1)',
+                        borderWidth: 1
+                    },
+                    {
+                        label: '返品金額 (円)',
+                        data: refundAmounts,
+                        backgroundColor: 'rgba(255, 99, 132, 0.7)',
+                        borderColor: 'rgba(255, 99, 132, 1)',
+                        borderWidth: 1
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        title: { display: true, text: '金額 (円)' }
+                    },
+                    x: {
+                        title: { display: true, text: '商品' }
+                    }
+                },
+                plugins: {
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                let label = context.dataset.label || '';
+                                if (label) {
+                                    label += ': ';
+                                }
+                                if (context.parsed.y !== null) {
+                                    label += new Intl.NumberFormat('ja-JP', { style: 'currency', currency: 'JPY' }).format(context.parsed.y);
+                                }
+                                return label;
+                            }
+                        }
+                    }
+                }
+            }
+        });
     }
 
+    // --- 時間帯別売上グラフ ---
     function renderSalesOverTimeChart(salesData, overallStartTime, overallEndTime) {
         const salesOverTimeCtx = document.getElementById('salesOverTimeChart')?.getContext('2d');
-        if (!salesOverTimeCtx) return;
+        if (!salesOverTimeCtx) {
+            console.warn("renderSalesOverTimeChart: Canvas context not found.");
+            return;
+        }
+
         if (salesData.length === 0) {
-            if (salesOverTimeChartInstance) salesOverTimeChartInstance.destroy();
+            if (salesOverTimeChartInstance) {
+                salesOverTimeChartInstance.destroy();
+                salesOverTimeChartInstance = null; // インスタンスをクリア
+            }
             salesOverTimeCtx.clearRect(0, 0, salesOverTimeCtx.canvas.width, salesOverTimeCtx.canvas.height);
-            salesOverTimeCtx.font = "16px Arial"; salesOverTimeCtx.fillStyle = "#777"; salesOverTimeCtx.textAlign = "center";
+            salesOverTimeCtx.font = "16px Arial";
+            salesOverTimeCtx.fillStyle = "#777";
+            salesOverTimeCtx.textAlign = "center";
             salesOverTimeCtx.fillText("該当データなし", salesOverTimeCtx.canvas.width / 2, salesOverTimeCtx.canvas.height / 2);
             return;
         }
-        const salesByTimeSlot = {}; const slotHours = 3;
+
+        const salesByTimeSlot = {};
+        const slotHours = 3;
         let chartStartTime, chartEndTime;
-        if (overallStartTime && overallEndTime) { chartStartTime = new Date(overallStartTime); chartEndTime = new Date(overallEndTime); }
-        else if (salesData.length > 0) { const timestamps = salesData.filter(s=>s.timestamp && s.timestamp.toDate).map(s => s.timestamp.toDate().getTime()); if(timestamps.length === 0){ chartStartTime = new Date(); chartStartTime.setHours(0,0,0,0); chartEndTime = new Date(); chartEndTime.setHours(23,59,59,999); } else { chartStartTime = new Date(Math.min(...timestamps)); chartEndTime = new Date(Math.max(...timestamps));}  }
-        else { chartStartTime = new Date(); chartStartTime.setHours(0,0,0,0); chartEndTime = new Date(); chartEndTime.setHours(23,59,59,999); }
+
+        if (overallStartTime && overallEndTime) {
+            chartStartTime = new Date(overallStartTime);
+            chartEndTime = new Date(overallEndTime);
+        } else if (salesData.length > 0) {
+            const timestamps = salesData
+                .filter(s => s.timestamp && typeof s.timestamp.toDate === 'function') // 有効なタイムスタンプを持つデータのみフィルタリング
+                .map(s => s.timestamp.toDate().getTime());
+            if (timestamps.length === 0) { // 有効なタイムスタンプが一つもない場合
+                chartStartTime = new Date(); chartStartTime.setHours(0,0,0,0);
+                chartEndTime = new Date(); chartEndTime.setHours(23,59,59,999);
+            } else {
+                chartStartTime = new Date(Math.min(...timestamps));
+                chartEndTime = new Date(Math.max(...timestamps));
+            }
+        } else { // データも期間指定もない場合
+            chartStartTime = new Date(); chartStartTime.setHours(0,0,0,0);
+            chartEndTime = new Date(); chartEndTime.setHours(23,59,59,999);
+        }
         chartStartTime.setHours(Math.floor(chartStartTime.getHours() / slotHours) * slotHours, 0, 0, 0);
-        const labels = []; let currentSlotStart = new Date(chartStartTime);
+
+        const labels = [];
+        let currentSlotStart = new Date(chartStartTime);
         while (currentSlotStart <= chartEndTime) {
             const slotKey = `${currentSlotStart.getFullYear()}-${String(currentSlotStart.getMonth() + 1).padStart(2, '0')}-${String(currentSlotStart.getDate()).padStart(2, '0')} ${String(currentSlotStart.getHours()).padStart(2, '0')}:00`;
-            labels.push(slotKey); salesByTimeSlot[slotKey] = { salesAmount: 0, refundAmount: 0 };
+            labels.push(slotKey);
+            salesByTimeSlot[slotKey] = { salesAmount: 0, refundAmount: 0 };
             currentSlotStart.setHours(currentSlotStart.getHours() + slotHours);
         }
+
         salesData.forEach(sale => {
-            if (!sale.timestamp || !sale.timestamp.toDate) return;
+            if (!sale.timestamp || typeof sale.timestamp.toDate !== 'function') return;
             const saleTime = sale.timestamp.toDate();
             const slotStartHour = Math.floor(saleTime.getHours() / slotHours) * slotHours;
-            const slotKeyDate = new Date(saleTime); slotKeyDate.setHours(slotStartHour, 0, 0, 0);
+            const slotKeyDate = new Date(saleTime);
+            slotKeyDate.setHours(slotStartHour, 0, 0, 0);
             const slotKey = `${slotKeyDate.getFullYear()}-${String(slotKeyDate.getMonth() + 1).padStart(2, '0')}-${String(slotKeyDate.getDate()).padStart(2, '0')} ${String(slotKeyDate.getHours()).padStart(2, '0')}:00`;
+
             if (salesByTimeSlot[slotKey]) {
-                let transactionAmount = 0; if(sale.items && sale.items.forEach) sale.items.forEach(item => transactionAmount += item.price * item.quantity);
-                if (sale.status === 'completed' || sale.status === 'served') { salesByTimeSlot[slotKey].salesAmount += transactionAmount; }
-                else if (sale.status === 'refunded') { salesByTimeSlot[slotKey].refundAmount += transactionAmount; }
+                let transactionAmount = 0;
+                if (sale.items && Array.isArray(sale.items)) {
+                    sale.items.forEach(item => transactionAmount += (item.price || 0) * (item.quantity || 0));
+                }
+                if (sale.status === 'completed' || sale.status === 'served') {
+                    salesByTimeSlot[slotKey].salesAmount += transactionAmount;
+                } else if (sale.status === 'refunded') {
+                    salesByTimeSlot[slotKey].refundAmount += transactionAmount;
+                }
             }
         });
+
         const salesAmounts = labels.map(key => salesByTimeSlot[key] ? salesByTimeSlot[key].salesAmount : 0);
         const refundAmounts = labels.map(key => salesByTimeSlot[key] ? salesByTimeSlot[key].refundAmount : 0);
-        if (salesOverTimeChartInstance) salesOverTimeChartInstance.destroy();
-        salesOverTimeChartInstance = new Chart(salesOverTimeCtx, { type: 'bar', data: { labels: labels, datasets: [ { label: '総売上金額 (円)', data: salesAmounts, backgroundColor: 'rgba(54, 162, 235, 0.7)' }, { label: '総返品金額 (円)', data: refundAmounts, backgroundColor: 'rgba(255, 159, 64, 0.7)' } ] }, options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, title: { display: true, text: '金額 (円)' } }, x: { title: { display: true, text: '時間帯 (3時間ごと)' } } }, plugins: { tooltip: { mode: 'index', intersect: false } } } });
-    }
 
+        if (salesOverTimeChartInstance) {
+            salesOverTimeChartInstance.destroy();
+        }
+        salesOverTimeChartInstance = new Chart(salesOverTimeCtx, {
+            type: 'bar', // または 'line'
+            data: {
+                labels: labels,
+                datasets: [
+                    {
+                        label: '総売上金額 (円)',
+                        data: salesAmounts,
+                        backgroundColor: 'rgba(54, 162, 235, 0.7)',
+                        borderColor: 'rgba(54, 162, 235, 1)',
+                        borderWidth: 1
+                    },
+                    {
+                        label: '総返品金額 (円)',
+                        data: refundAmounts,
+                        backgroundColor: 'rgba(255, 159, 64, 0.7)',
+                        borderColor: 'rgba(255, 159, 64, 1)',
+                        borderWidth: 1
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        title: { display: true, text: '金額 (円)' }
+                    },
+                    x: {
+                        title: { display: true, text: '時間帯 (3時間ごと)' }
+                        // type: 'time', // もし時間軸として扱いたい場合
+                        // time: { unit: 'hour', stepSize: 3, displayFormats: { hour: 'MM/dd HH:mm' } }
+                    }
+                },
+                plugins: {
+                    tooltip: {
+                        mode: 'index',
+                        intersect: false,
+                    }
+                }
+            }
+        });
+    }
     function displayQueueStatus() {
         const queueStatusRef = db.collection('queue').doc('currentStatus'); // ローカルで再定義
         queueStatusRef.onSnapshot(doc => {
