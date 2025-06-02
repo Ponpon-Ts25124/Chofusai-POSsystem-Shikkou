@@ -56,33 +56,43 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function renderDualDisplay(data) {
+        console.log("queue-script.js:renderDualDisplay called with data:", JSON.stringfy(data, null, 2)); //データ全体を整形してログ表示
+        
         const makingTickets = data.makingTickets || [];
         const readyTickets = data.readyTickets || [];
         const servingTicket = data.servingTicket || 0; // このservingTicketは主にreadyTicketsの先頭を指す
 
         if (makingListUl) {
             makingListUl.innerHTML = '';
+            console.log("queue-script.js: Cleared makingListUl. makingTickets count:", makingTickets.length); //ログ追加
+
             if (makingTickets.length === 0) {
                 const li = document.createElement('li');
                 li.classList.add('no-tickets-message');
                 li.textContent = '作成中なし';
                 makingListUl.appendChild(li);
+                console.log("queue-script.js: Added 'No making tickets' message.");// ログ追加
             } else {
                 makingTickets.forEach(ticket => {
                     const li = document.createElement('li');
                     li.textContent = ticket;
                     makingListUl.appendChild(li);
+                    console.log(`queue-script.js: Appended making ticket ${ticket} (index ${index}) to makingListUl.`); //ログ追加
                 });
             }
-        }
+        } else {
+            console.error("queue-script.js: ERROR - makingListUl element not found in the DOM!"); //ログ追加
+		}
 
         if (readyListUl) {
             readyListUl.innerHTML = '';
+            console.log("queue-script.js: Cleared readyListUl. readyTickets count:", readyTickets.length); //ログ追加
             if (readyTickets.length === 0) {
                 const li = document.createElement('li');
                 li.classList.add('no-tickets-message');
                 li.textContent = '受取待ちなし';
                 readyListUl.appendChild(li);
+                 console.log("queue-script.js: Added 'No ready tickets' message.");// ログ追加
             } else {
                 readyTickets.forEach(ticket => {
                     const li = document.createElement('li');
@@ -90,10 +100,14 @@ document.addEventListener('DOMContentLoaded', () => {
                     // 「呼び出し中」の強調は、readyTickets の先頭の番号が servingTicket と一致する場合
                     if (ticket === servingTicket && readyTickets.indexOf(ticket) === 0) {
                         li.classList.add('now-serving');
+                         console.log(`queue-script.js: Ticket ${ticket} (index ${index}) in readyListUl is NOW SERVING.`); // ★ログ追加
                     }
                     readyListUl.appendChild(li);
+                     console.log(`queue-script.js: Appended ready ticket ${ticket} (index ${index}) to readyListUl.`); // ★ログ追加
                 });
             }
+        } else {
+            console.error("queue-script.js: ERROR - readyListUl element not found in the DOM!"); // ★重要エラーログ
         }
         // if (dualServingNumberSpan) {
         //      dualServingNumberSpan.textContent = `呼び出し中: ${servingTicket > 0 ? servingTicket : '---'}`;
