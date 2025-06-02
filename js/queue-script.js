@@ -1,4 +1,6 @@
 // js/queue-script.js
+console.log("queue-script.js: File loaded and script started.");
+
 document.addEventListener('DOMContentLoaded', () => {
     const normalDisplayDiv = document.getElementById('normal-display');
     const dualDisplayDiv = document.getElementById('dual-display');
