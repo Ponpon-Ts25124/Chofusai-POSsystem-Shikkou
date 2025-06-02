@@ -1,5 +1,7 @@
   // Firebase SDKの設定情報
-  const firebaseConfig = {
+		console.log("firebase-config.js: File loaded.");
+    
+    const firebaseConfig = {
     apiKey: "AIzaSyCsesB7w6HFfkXXab8m5h5TLUK-wICXzP8",
     authDomain: "chofusai-possystem.firebaseapp.com",
     projectId: "chofusai-possystem",
