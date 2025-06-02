@@ -47,13 +47,39 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>  <!-- ★★★ これが重要 ★★★ -->
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+
+    <script>
+        console.log("queue-display.html: Inline script - Before firebase-config.js load.");
+    </script>
     <script src="js/firebase-config.js"></script>
+    <script>
+        console.log("queue-display.html: Inline script - After firebase-config.js load, before queue-script.js load.");
+        if (typeof firebase !== 'undefined') {
+            console.log("queue-display.html: Firebase global object IS available here.");
+            if (typeof db !== 'undefined') {
+                console.log("queue-display.html: Firestore 'db' instance IS available here.");
+            } else {
+                console.error("queue-display.html: Firestore 'db' instance IS NOT available here (after firebase-config.js).");
+            }
+        } else {
+            console.error("queue-display.html: Firebase global object IS NOT available here (after firebase-config.js).");
+        }
+    </script>
     <script src="js/queue-script.js"></script>
     <script>
+        console.log("queue-display.html: Inline script - After queue-script.js load.");
+        // アクティブリンク用のJSはここに移動しても良い
         document.addEventListener('DOMContentLoaded', function() {
+            console.log("queue-display.html: DOMContentLoaded for active link script.");
             const currentPage = window.location.pathname.split("/").pop();
             if (currentPage === "queue-display.html") {
-                document.getElementById('nav-queue')?.classList.add('active');
+                const navElement = document.getElementById('nav-queue');
+                if (navElement) {
+                    navElement.classList.add('active');
+                    console.log("queue-display.html: Active link set for nav-queue.");
+                } else {
+                    console.warn("queue-display.html: nav-queue element not found for active link.");
+                }
             }
         });
     </script>
