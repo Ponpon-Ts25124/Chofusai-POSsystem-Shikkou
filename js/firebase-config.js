@@ -1,5 +1,5 @@
   // Firebase SDKの設定情報
-		console.log("firebase-config.js: File loaded.");
+		console.log("firebase-config.js: File loaded and script started.");
     
     const firebaseConfig = {
     apiKey: "AIzaSyCsesB7w6HFfkXXab8m5h5TLUK-wICXzP8",
@@ -17,6 +17,13 @@
   const db = firebase.firestore();
   const auth = firebase.auth(); // authもここで定義しておくと他で使いやすい
 
-	<!-- queue-display.html -->
-	<script src="js/firebase-config.js"></script> <!-- ★これが先 -->
-	<script src="js/queue-script.js"></script>    <!-- ★これが後 -->
+	if (typeof db !== 'undefined') {
+    console.log("firebase-config.js: Firestore 'db' instance created successfully.");
+} else {
+    console.error("firebase-config.js: Firestore 'db' instance creation FAILED.");
+}
+if (typeof auth !== 'undefined') {
+    console.log("firebase-config.js: Firebase 'auth' instance created successfully.");
+} else {
+    console.error("firebase-config.js: Firebase 'auth' instance creation FAILED.");
+}
