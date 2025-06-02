@@ -14,3 +14,7 @@
   }
   const db = firebase.firestore();
   const auth = firebase.auth(); // authもここで定義しておくと他で使いやすい
+
+	<!-- queue-display.html -->
+	<script src="js/firebase-config.js"></script> <!-- ★これが先 -->
+	<script src="js/queue-script.js"></script>    <!-- ★これが後 -->
