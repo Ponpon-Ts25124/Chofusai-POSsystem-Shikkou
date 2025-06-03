@@ -425,7 +425,7 @@ document.addEventListener('DOMContentLoaded', () => {
         currentOperatingTicket = null;
         ticketNumberInput.value = '';
     }
-    closeModalButton_TicketOptions?.addEventListener('click', closeModalButton_TicketOptions); // closeModal_TicketOptions を使う
+    closeModalButtonForTicketOptions?.addEventListener('click', closeModalButtonForTicketOptions); // closeModal_TicketOptions を使う
     modalOptionBackButton?.addEventListener('click', closeModal);
     window.addEventListener('click', (event) => { if (event.target == ticketOptionsModal) closeModal(); });
 
