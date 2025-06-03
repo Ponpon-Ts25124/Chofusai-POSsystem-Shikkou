@@ -36,17 +36,17 @@ document.addEventListener('DOMContentLoaded', () => {
         if (user) {
             if(loginContainer) loginContainer.classList.add('hidden');
             if(dashboardContent) {
-                dashboardContent.style.display = 'block';
+                // dashboardContent.style.display = 'block';
                 dashboardContent.classList.remove('hidden');
             }
             initializeDashboard();
         } else {
             if(loginContainer) {
-                loginContainer.style.display = 'block';
+                // loginContainer.style.display = 'block';
                 loginContainer.classList.remove('hidden');
             }
             if(dashboardContent) {
-                dashboardContent.style.display = 'none';
+                // dashboardContent.style.display = 'none';
                 dashboardContent.classList.add('hidden');
             }
             if(loginErrorDiv) loginErrorDiv.textContent = '';

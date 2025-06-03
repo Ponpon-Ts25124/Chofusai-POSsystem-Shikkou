@@ -423,6 +423,74 @@ body {
 }
 #open-ticket-options-button:hover { background-color: #5a6268; }
 
+/* POS画面のお預かり・お釣り (モーダル用) */
+.payment-modal-content { /* 会計モーダル専用の調整 */
+    max-width: 450px; /* 少し広めにする */
+}
+.modal-payment-input {
+    display: flex;
+    align-items: center;
+    justify-content: center; /* 中央寄せ */
+    margin: 15px 0;
+    font-size: 1.1em;
+}
+.modal-payment-input label {
+    margin-right: 10px;
+}
+#modal-amount-received {
+    padding: 8px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    width: 120px;
+    text-align: right; /* 金額なので右寄せ */
+    font-size: 1.1em;
+    margin-right: 5px;
+}
+#keypad-container {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr); /* 3列のグリッド */
+    gap: 10px; /* ボタン間の隙間 */
+    margin: 20px auto;
+    max-width: 300px; /* キーパッド全体の幅 */
+}
+#keypad-container button {
+    padding: 15px;
+    font-size: 1.5em;
+    background-color: #f0f0f0;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+#keypad-container button:hover {
+    background-color: #e0e0e0;
+}
+#keypad-container button.keypad-clear,
+#keypad-container button.keypad-bs { /* クリアとバックスペースボタン */
+    background-color: #ffc107; /* 黄色系 */
+    color: #333;
+}
+#keypad-container button.keypad-clear:hover,
+#keypad-container button.keypad-bs:hover {
+    background-color: #e0a800;
+}
+
+#modal-change-display {
+    font-size: 1.3em;
+    font-weight: bold;
+    margin: 20px 0;
+}
+#modal-change-display.不足 { /* 不足額の場合のスタイル */
+    color: #dc3545; /* 赤色 */
+}
+#confirm-payment-button {
+    background-color: #28a745; /* 緑系 */
+    color: white;
+}
+#confirm-payment-button:hover {
+    background-color: #218838;
+}
+
 .modal {
     position: fixed;
     z-index: 1001;

@@ -120,10 +120,105 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
     }
+    // --- キーパッドの生成 ---
+    function generateKeypad() {
+        if (!keypadContainer) return;
+        keypadContainer.innerHTML = ''; // クリア
+        const keys = [
+            '7', '8', '9',
+            '4', '5', '6',
+            '1', '2', '3',
+            'C', '0', 'BS' // C: クリア, BS: バックスペース
+        ];
+        keys.forEach(key => {
+            const button = document.createElement('button');
+            button.textContent = key;
+            button.type = 'button'; // form内でのsubmitを防ぐ
+            if (key === 'C') {
+                button.classList.add('keypad-clear');
+                button.addEventListener('click', () => {
+                    if(modalAmountReceivedInput) modalAmountReceivedInput.value = '0';
+                    calculateModalChange();
+                });
+            } else if (key === 'BS') {
+                button.classList.add('keypad-bs');
+                button.addEventListener('click', () => {
+                    if(modalAmountReceivedInput) {
+                        modalAmountReceivedInput.value = modalAmountReceivedInput.value.slice(0, -1) || '0';
+                    }
+                    calculateModalChange();
+                });
+            } else { // 数字キー
+                button.addEventListener('click', () => {
+                    if(modalAmountReceivedInput) {
+                        if (modalAmountReceivedInput.value === '0') {
+                            modalAmountReceivedInput.value = key;
+                        } else {
+                            modalAmountReceivedInput.value += key;
+                        }
+                    }
+                    calculateModalChange();
+                });
+            }
+            keypadContainer.appendChild(button);
+        });
+    }
 
-    checkoutButton?.addEventListener('click', async () => {
+    // --- モーダル内のお釣り/不足額計算 ---
+    function calculateModalChange() {
+        if (!modalTotalAmountSpan || !modalAmountReceivedInput || !modalChangeDisplayP || !modalChangeAmountSpan) return;
+
+        const totalAmount = parseFloat(modalTotalAmountSpan.textContent) || 0;
+        const amountReceived = parseFloat(modalAmountReceivedInput.value) || 0;
+        let changeOrShortage = amountReceived - totalAmount;
+
+        modalChangeDisplayP.classList.remove('不足'); // 不足クラスを一旦削除
+
+        if (amountReceived >= totalAmount) {
+            modalChangeDisplayP.innerHTML = `お釣り: <span id="modal-change-amount">${changeOrShortage}</span> 円`;
+        } else {
+            modalChangeDisplayP.innerHTML = `不足額: <span id="modal-change-amount">${Math.abs(changeOrShortage)}</span> 円`;
+            modalChangeDisplayP.classList.add('不足');
+        }
+        // modalChangeAmountSpan は再生成されるので、再度取得するか、innerHTMLで直接値を設定する
+        // document.getElementById('modal-change-amount').textContent = ... でも良いが、上記で一括設定
+    }
+
+    // --- 「会計する」ボタンでモーダルを開く ---
+    checkoutButton?.addEventListener('click', () => {
         if (cart.length === 0) { alert("カートが空です。"); return; }
-        const totalAmount = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
+        if (!paymentConfirmModal || !modalTotalAmountSpan || !modalAmountReceivedInput || !modalChangeDisplayP) return;
+
+        const total = parseFloat(totalAmountSpan.textContent) || 0;
+        modalTotalAmountSpan.textContent = total;
+        modalAmountReceivedInput.value = '0'; // 初期値は0
+        calculateModalChange(); // 初期お釣り表示
+        generateKeypad(); // キーパッド生成
+        paymentConfirmModal.classList.remove('hidden');
+    });
+        // --- 会計確認モーダルを閉じる ---
+    function closePaymentModal() {
+        if(paymentConfirmModal) paymentConfirmModal.classList.add('hidden');
+    }
+    closePaymentModalButton?.addEventListener('click', closePaymentModal);
+    cancelPaymentButton?.addEventListener('click', closePaymentModal);
+
+
+    // --- 「支払いを確定する」ボタンの処理 ---
+    confirmPaymentButton?.addEventListener('click', async () => {
+        if (!modalTotalAmountSpan || !modalAmountReceivedInput) return;
+
+        const totalAmount = parseFloat(modalTotalAmountSpan.textContent) || 0;
+        const amountReceived = parseFloat(modalAmountReceivedInput.value) || 0;
+        const changeOrShortage = amountReceived - totalAmount;
+
+        if (amountReceived < totalAmount) {
+            alert("お預かり金額が合計金額に足りていません。");
+            return;
+        }
+
+        closePaymentModal(); // 先にモーダルを閉じる
+
         let newTicketNumber;
         try {
             console.log("Checkout process started...");
@@ -157,7 +252,12 @@ document.addEventListener('DOMContentLoaded', () => {
             await db.collection('sales').add({
                 timestamp: firebase.firestore.FieldValue.serverTimestamp(),
                 items: cart.map(item => ({ productId: item.id, name: item.name, price: item.price, quantity: item.quantity })),
-                totalAmount: totalAmount, paymentMethod: "cash", ticketNumber: newTicketNumber, status: "completed"
+                totalAmount: totalAmount,
+                paymentMethod: "cash",
+                ticketNumber: newTicketNumber,
+                status: "completed",
+                amountReceived: amountReceived,
+                changeGiven: changeOrShortage
             });
             console.log("Sales data added for ticket:", newTicketNumber);
 
@@ -167,11 +267,18 @@ document.addEventListener('DOMContentLoaded', () => {
             } else {
                 console.warn("Cart was empty or newTicketNumber was not generated when trying to add to kitchen queue.");
             }
-            alert(`会計完了。\n整理番号: ${newTicketNumber}\n合計: ${totalAmount}円`);
-            cart = []; renderCart();
+            alert(`会計完了。\n整理番号: ${newTicketNumber}\n合計: ${totalAmount}円\nお預かり: ${amountReceived}円\nお釣り: ${changeOrShortage}円`);
+            cart = [];
+            renderCart();
         } catch (error) {
             console.error("Error during checkout: ", error); alert("会計処理中にエラーが発生しました。");
         }
+    });
+        // clearCartButton の処理では、カートと合計金額表示のリセットのみでOK
+    clearCartButton?.addEventListener('click', () => {
+        cart = [];
+        renderCart(); // 合計金額表示が0になる
+        // お預かり・お釣りの表示はモーダル外では不要になった
     });
 
     queueStatusRef.onSnapshot(doc => {

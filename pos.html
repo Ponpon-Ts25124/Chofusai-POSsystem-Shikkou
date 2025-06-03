@@ -32,17 +32,29 @@
             </ul>
             <div class="cart-summary">
                 <p>合計金額: <span id="total-amount">0</span> 円</p>
-                <!-- ★★★ お預かり・お釣りセクション追加 ★★★ -->
-                <div class="payment-details">
-                    <div>
-                        <label for="amount-received">お預かり金額:</label>
-                        <input type="number" id="amount-received" placeholder="0"> 円
-                    </div>
-                    <p>お釣り: <span id="change-amount">0</span> 円</p>
-                </div>
                 <button id="checkout-button">会計する</button>
                 <button id="clear-cart-button">クリア</button>
             </div>
+
+                <!-- ★★★ 会計確認モーダル ★★★ -->
+        <div id="payment-confirm-modal" class="modal hidden">
+            <div class="modal-content payment-modal-content"> <!-- 新しいクラスを追加 -->
+                <span class="close-modal-button" id="close-payment-modal-button">×</span>
+                <h4>会計確認</h4>
+                <p>合計金額: <span id="modal-total-amount">0</span> 円</p>
+                <div class="modal-payment-input">
+                    <label for="modal-amount-received">お預かり金額:</label>
+                    <input type="number" id="modal-amount-received" placeholder="0" readonly> <!-- readonlyにして数字ボタンで操作 -->
+                    <span>円</span>
+                </div>
+                <div id="keypad-container">
+                    <!-- 数字ボタンがここにJSで生成される -->
+                </div>
+                <p id="modal-change-display">お釣り: <span id="modal-change-amount">0</span> 円</p>
+                <button id="confirm-payment-button">支払いを確定する</button>
+                <button id="cancel-payment-button" class="modal-option-back">キャンセル</button>
+            </div>
+        </div>
 
             <div class="queue-management">
                 <h3>呼び出し状況</h3>
