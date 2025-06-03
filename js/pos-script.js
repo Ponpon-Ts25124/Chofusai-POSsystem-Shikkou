@@ -36,7 +36,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const modalAmountReceivedInput = document.getElementById('modal-amount-received'); // ★
     const keypadContainer = document.getElementById('keypad-container');
     const modalChangeDisplayP = document.getElementById('modal-change-display');
-    // const modalChangeAmountSpan = document.getElementById('modal-change-amount'); // これは modalChangeDisplayP の innerHTML で管理するので不要
+    const modalChangeAmountSpan = document.getElementById('modal-change-amount'); // これは modalChangeDisplayP の innerHTML で管理するので不要
     const confirmPaymentButton = document.getElementById('confirm-payment-button'); // ★★★ この取得が成功しているか ★★★
     const cancelPaymentButton = document.getElementById('cancel-payment-button');
 
