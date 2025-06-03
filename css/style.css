@@ -252,6 +252,36 @@ body {
 
 
 /* --- POS画面 (pos.html) --- */
+/* POS画面のお預かり・お釣り */
+.payment-details {
+    margin: 15px 0;
+    padding: 10px;
+    border: 1px solid #eee;
+    border-radius: 4px;
+    background-color: #f9f9f9;
+}
+.payment-details div {
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+}
+.payment-details label {
+    margin-right: 10px;
+    font-weight: bold;
+}
+#amount-received {
+    padding: 8px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    width: 100px; /* 幅調整 */
+    margin-right: 5px;
+}
+.payment-details p {
+    font-size: 1.1em;
+    font-weight: bold;
+    color: #28a745; /* お釣りの色 */
+    margin: 0;
+}
 .pos-container {
     display: flex;
     width: 90%;

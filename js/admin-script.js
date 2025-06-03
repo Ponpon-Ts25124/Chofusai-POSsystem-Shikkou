@@ -26,8 +26,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const adminWaitingCountSpan = document.getElementById('admin-waiting-count');
 
     // 表示モード関連
-    const displayModeSelect = document.getElementById('display-mode-select');
-    const saveDisplayModeButton = document.getElementById('save-display-mode-button');
     const queueStatusRefForAdminDisplayMode = db.collection('queue').doc('currentStatus');
 
 
@@ -99,19 +97,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    saveDisplayModeButton?.addEventListener('click', async () => {
-        if (!displayModeSelect) return;
-        const selectedMode = displayModeSelect.value;
-        try {
-            await queueStatusRefForAdminDisplayMode.update({
-                displayMode: selectedMode
-            });
-            alert(`表示モードを「${selectedMode === "dual" ? "2段階表示" : "通常表示"}」に更新しました。`);
-        } catch (error) {
-            console.error("Error updating display mode: ", error);
-            alert("表示モードの更新に失敗しました。");
-        }
-    });
     // --- fetchDataAndRenderCharts 関数 ---
     async function fetchDataAndRenderCharts() {
         console.log("fetchDataAndRenderCharts: Initiating data fetch and render..."); // ★デバッグログ
@@ -481,13 +466,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const today = new Date().toISOString().split('T')[0];
         if(dateSelector) dateSelector.value = today;
         if(timeRangeSelector) timeRangeSelector.value = 'today';
-
-        queueStatusRefForAdminDisplayMode.get().then(doc => {
-            if (doc.exists && displayModeSelect) {
-                const currentMode = doc.data().displayMode || "normal";
-                displayModeSelect.value = currentMode;
-            }
-        }).catch(err => console.error("Error fetching current display mode for admin:", err));
 
         fetchDataAndRenderCharts();
         displayQueueStatus();

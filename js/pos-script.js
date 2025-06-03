@@ -131,7 +131,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const queueDoc = await transaction.get(queueStatusRef);
                 let data = queueDoc.data() || {};
                 if (!queueDoc.exists) {
-                    data = { lastIssuedTicket: 0, servingTicket: 0, waitingCount: 0, makingTickets: [], readyTickets: [], displayMode: "normal" };
+                    data = { lastIssuedTicket: 0, servingTicket: 0, waitingCount: 0, makingTickets: [], readyTickets: [] };
                 }
                 const currentLastTicket = data.lastIssuedTicket || 0;
                 const newLastTicket = currentLastTicket + 1;
@@ -142,7 +142,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     makingTickets: newMakingTickets
                 };
                  if (typeof data.readyTickets === 'undefined') updateData.readyTickets = []; // 既存データにフィールドがなければ初期化
-                 if (typeof data.displayMode === 'undefined') updateData.displayMode = "normal";
                  if (typeof data.servingTicket === 'undefined') updateData.servingTicket = 0;
 
 
@@ -354,7 +353,7 @@ document.addEventListener('DOMContentLoaded', () => {
             try {
                 await queueStatusRef.set({
                     lastIssuedTicket: 0, servingTicket: 0, waitingCount: 0,
-                    makingTickets: [], readyTickets: [], displayMode: "normal"
+                    makingTickets: [], readyTickets: [],
                 }, { merge: true }); // merge:trueでフィールドがなくてもエラーにならないように
                 console.log("Initialized queue status with all fields.");
             } catch (e) { console.error("Error initializing queue status:", e); }
@@ -363,7 +362,6 @@ document.addEventListener('DOMContentLoaded', () => {
              const updates = {};
              if (typeof data.makingTickets === 'undefined') updates.makingTickets = [];
              if (typeof data.readyTickets === 'undefined') updates.readyTickets = [];
-             if (typeof data.displayMode === 'undefined') updates.displayMode = "normal";
              if (typeof data.waitingCount === 'undefined') updates.waitingCount = 0; // waitingCountも確認
              if (typeof data.servingTicket === 'undefined') updates.servingTicket = 0; // servingTicketも確認
              if (typeof data.lastIssuedTicket === 'undefined') updates.lastIssuedTicket = 0; // lastIssuedTicketも確認

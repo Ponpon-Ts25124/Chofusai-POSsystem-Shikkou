@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>整理番号案内 (2段階表示)</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="queue-info-body">
+    <header class="top-navigation-banner">
+        <nav>
+            <ul>
+                <li><a href="queue-display-normal.html" id="nav-queue-normal">通常表示</a></li>
+                <li><a href="queue-display-dual.html" id="nav-queue-dual">2段階表示</a></li>
+                <li><a href="pos.html" id="nav-pos">POS画面</a></li>
+                <li><a href="kitchen-display.html" id="nav-kitchen">厨房画面</a></li>
+                <li><a href="admin.html" id="nav-admin">管理者画面</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <main id="dual-display"> <!-- IDは維持しても良い -->
+        <div class="dual-display-container">
+            <section class="status-column">
+                <h2>ただいま作成中</h2>
+                <ul id="making-list" class="ticket-list">
+                    <!-- 作成中番号 -->
+                </ul>
+            </section>
+            <section class="status-column">
+                <h2>まもなくお渡しできます</h2>
+                <ul id="ready-list" class="ticket-list">
+                    <!-- 受取待ち番号 -->
+                </ul>
+            </section>
+        </div>
+        <p class="auto-refresh-note">この画面は自動で更新されます。</p>
+    </main>
+
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+    <script src="js/firebase-config.js"></script>
+    <script src="js/queue-script.js"></script> <!-- 同じJSファイルを参照 -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('nav-queue-dual')?.classList.add('active');
+        });
+    </script>
+</body>
+</html>
