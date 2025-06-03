@@ -297,14 +297,14 @@ body {
     padding: 20px;
     border-right: 1px solid #eee;
 }
-.products-area h2 { margin-top: 0; }
+.products-area h2 { margin-top: 10; }
 #product-list {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
     gap: 10px;
 }
 #product-list button {
-    padding: 15px 10px;
+    padding: 55px 10px;
     background-color: #5cb85c;
     color: white;
     border: none;

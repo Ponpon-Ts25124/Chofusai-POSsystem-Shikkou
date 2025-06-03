@@ -1,5 +1,7 @@
 // js/pos-script.js
 document.addEventListener('DOMContentLoaded', () => {
+    console.log("pos-script.js: DOMContentLoaded triggered."); // ★デバッグログ
+
     const productListDiv = document.getElementById('product-list');
     const cartItemsUl = document.getElementById('cart-items');
     const totalAmountSpan = document.getElementById('total-amount');
@@ -35,32 +37,62 @@ document.addEventListener('DOMContentLoaded', () => {
     let products = [];
     const queueStatusRef = db.collection('queue').doc('currentStatus');
 
+    // --- Firestoreから商品データを読み込む ---
     async function fetchProducts() {
+        console.log("pos-script.js: fetchProducts called."); // ★デバッグログ
         try {
             if (typeof db === 'undefined') {
-                console.error("Firestore 'db' instance is not defined in fetchProducts.");
+                console.error("pos-script.js: fetchProducts - Firestore 'db' instance is not defined.");
                 alert("データベース接続エラー: dbが未定義です。");
                 return;
             }
+            console.log("pos-script.js: fetchProducts - Attempting to get products from Firestore."); // ★デバッグログ
             const snapshot = await db.collection('products').orderBy('order', 'asc').get();
-            products = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            renderProducts();
+            console.log("pos-script.js: fetchProducts - Firestore snapshot received. Empty:", snapshot.empty, "Size:", snapshot.size); // ★デバッグログ
+
+            if (snapshot.empty) {
+                console.warn("pos-script.js: fetchProducts - No products found in Firestore 'products' collection.");
+                products = []; // products配列を空にする
+            } else {
+                products = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                console.log("pos-script.js: fetchProducts - Products mapped:", products); // ★デバッグログ
+            }
+            renderProducts(); // データ取得後（空でも）に描画関数を呼ぶ
         } catch (error) {
-            console.error("Error fetching products: ", error);
-            if (productListDiv) productListDiv.innerHTML = '<p style="color: red;">商品データの読み込みに失敗しました。</p>';
-            alert("商品データの読み込みに失敗しました。\n" + error.message);
+            console.error("pos-script.js: fetchProducts - Error fetching products: ", error); // ★エラーログ
+            if (productListDiv) productListDiv.innerHTML = '<p style="color: red;">商品データの読み込みに失敗しました。詳細はコンソールを確認してください。</p>';
+            // alert("商品データの読み込みに失敗しました。\n" + error.message); // アラートは状況に応じて
+            products = []; // エラー時もproducts配列を空にする
+            renderProducts(); // エラー時も（空の）描画を試みるか、メッセージ表示のみにする
         }
     }
 
+    // --- 商品ボタンを画面に表示 ---
     function renderProducts() {
-        if (!productListDiv) return;
-        productListDiv.innerHTML = '';
-        products.forEach(product => {
+        console.log("pos-script.js: renderProducts called. Number of products to render:", products.length); // ★デバッグログ
+        if (!productListDiv) {
+            console.error("pos-script.js: renderProducts - productListDiv is null, cannot render products.");
+            return;
+        }
+        productListDiv.innerHTML = ''; // 商品リストをクリア
+
+        if (products.length === 0) {
+            console.log("pos-script.js: renderProducts - No products to display."); // ★デバッグログ
+            productListDiv.innerHTML = '<p>表示できる商品がありません。</p>'; // 商品がない場合のメッセージ
+            return;
+        }
+
+        products.forEach((product, index) => {
+            if (!product || typeof product.name === 'undefined' || typeof product.price === 'undefined') {
+                console.warn(`pos-script.js: renderProducts - Skipping invalid product data at index ${index}:`, product);
+                return; // 不正なデータはスキップ
+            }
             const button = document.createElement('button');
             button.textContent = `${product.name} (${product.price}円)`;
             button.dataset.productId = product.id;
             button.addEventListener('click', () => addToCart(product));
             productListDiv.appendChild(button);
+            console.log(`pos-script.js: renderProducts - Appended button for product: ${product.name}`); // ★デバッグログ
         });
     }
 
@@ -454,6 +486,11 @@ document.addEventListener('DOMContentLoaded', () => {
     refundTransactionButton?.addEventListener('click', async () => { /* ... (既存のコード) ... */ });
 
     async function initializePos() {
+        console.log("pos-script.js: initializePos called."); // ★デバッグログ
+        if (typeof firebase === 'undefined' || typeof db === 'undefined') {
+            console.error("pos-script.js: initializePos - Firebase or DB not initialized.");
+            return;
+        }
         await fetchProducts();
         const doc = await queueStatusRef.get();
         if (!doc.exists) {
@@ -479,5 +516,12 @@ document.addEventListener('DOMContentLoaded', () => {
              }
         }
     }
+    // ★★★ initializePosの呼び出しを確認 ★★★
+    if (document.readyState === 'loading') { // DOMがまだ読み込み中の場合
+        document.addEventListener('DOMContentLoaded', initializePos);
+        console.log("pos-script.js: Added DOMContentLoaded listener for initializePos.");
+    } else { // DOMが既に読み込み完了している場合
+        console.log("pos-script.js: DOM already loaded, calling initializePos directly.");
     initializePos();
+    }
 });
