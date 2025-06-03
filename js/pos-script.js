@@ -26,7 +26,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const ticketNumberInput = document.getElementById('ticket-number-input');
     const openTicketOptionsButton = document.getElementById('open-ticket-options-button');
     const ticketOptionsModal = document.getElementById('ticket-options-modal');
-    const closeModalButton = document.querySelector('.close-modal-button');
+    const closeModalButton_TicketOptions = document.querySelector('#ticket-options-modal .close-modal-button'); // ★より具体的に指定
+    const paymentConfirmModal = document.getElementById('payment-confirm-modal');
+    const closePaymentModalButton_PaymentConfirm = document.getElementById('close-payment-modal-button'); // 会計確認モーダル
     const modalTicketNumberDisplay = document.getElementById('modal-ticket-number-display');
     const modalOptionCancelOrderButton = document.getElementById('modal-option-cancel-order');
     const modalOptionMarkServedButton = document.getElementById('modal-option-mark-served');
@@ -232,7 +234,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function closePaymentModal() {
         if(paymentConfirmModal) paymentConfirmModal.classList.add('hidden');
     }
-    closePaymentModalButton?.addEventListener('click', closePaymentModal);
+    closePaymentModalButton_PaymentConfirm?.addEventListener('click', closePaymentModal_PaymentConfirm); // closePaymentModal_PaymentConfirm を使う
     cancelPaymentButton?.addEventListener('click', closePaymentModal);
 
 
@@ -370,7 +372,7 @@ document.addEventListener('DOMContentLoaded', () => {
         currentOperatingTicket = null;
         ticketNumberInput.value = '';
     }
-    closeModalButton?.addEventListener('click', closeModal);
+    closeModalButton_TicketOptions?.addEventListener('click', closeModalButton_TicketOptions); // closeModal_TicketOptions を使う
     modalOptionBackButton?.addEventListener('click', closeModal);
     window.addEventListener('click', (event) => { if (event.target == ticketOptionsModal) closeModal(); });
 
