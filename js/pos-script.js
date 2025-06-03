@@ -29,15 +29,39 @@ document.addEventListener('DOMContentLoaded', () => {
     const ticketOptionsModal = document.getElementById('ticket-options-modal');
     const closeModalButtonForTicketOptions = document.querySelector('#ticket-options-modal .close-modal-button');
     const modalOptionBackButton = document.getElementById('modal-option-back');
-    // 会計確認モーダル (payment-confirm-modal)
+    // 会計確認モーダル用要素 (★ここを重点的に確認★)
     const paymentConfirmModal = document.getElementById('payment-confirm-modal');
     const closePaymentModalButtonForPayment = document.getElementById('close-payment-modal-button');
+    const modalTotalAmountSpan = document.getElementById('modal-total-amount'); // ★
+    const modalAmountReceivedInput = document.getElementById('modal-amount-received'); // ★
+    const keypadContainer = document.getElementById('keypad-container');
+    const modalChangeDisplayP = document.getElementById('modal-change-display');
+    // const modalChangeAmountSpan = document.getElementById('modal-change-amount'); // これは modalChangeDisplayP の innerHTML で管理するので不要
+    const confirmPaymentButton = document.getElementById('confirm-payment-button'); // ★★★ この取得が成功しているか ★★★
     const cancelPaymentButton = document.getElementById('cancel-payment-button');
 
     const modalTicketNumberDisplay = document.getElementById('modal-ticket-number-display');
     const modalOptionCancelOrderButton = document.getElementById('modal-option-cancel-order');
     const modalOptionMarkServedButton = document.getElementById('modal-option-mark-served');
     let currentOperatingTicket = null;
+    // ★★★ confirmPaymentButton の存在チェックログ ★★★
+    if (confirmPaymentButton) {
+        console.log("pos-script.js: confirmPaymentButton element FOUND.");
+    } else {
+        console.error("pos-script.js: ERROR - confirmPaymentButton element NOT FOUND. Check HTML ID.");
+        // confirmPaymentButton がないと、これ以降のイベントリスナー登録でエラーになる
+    }
+    // ★★★ modalTotalAmountSpan, modalAmountReceivedInput の存在チェックログ ★★★
+    if (modalTotalAmountSpan) {
+        console.log("pos-script.js: modalTotalAmountSpan element FOUND.");
+    } else {
+        console.error("pos-script.js: ERROR - modalTotalAmountSpan element NOT FOUND. Check HTML ID.");
+    }
+    if (modalAmountReceivedInput) {
+        console.log("pos-script.js: modalAmountReceivedInput element FOUND.");
+    } else {
+        console.error("pos-script.js: ERROR - modalAmountReceivedInput element NOT FOUND. Check HTML ID.");
+    }
 
     let cart = [];
     let products = [];
@@ -225,8 +249,10 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- 「会計する」ボタンでモーダルを開く ---
     checkoutButton?.addEventListener('click', () => {
         if (cart.length === 0) { alert("カートが空です。"); return; }
-        if (!paymentConfirmModal || !modalTotalAmountSpan || !modalAmountReceivedInput || !modalChangeDisplayP) return;
-
+        if (!paymentConfirmModal || !modalTotalAmountSpan || !modalAmountReceivedInput || !modalChangeDisplayP) {
+            console.error("Checkout button: One or more payment modal elements are missing.");
+            return;
+        }
         const total = parseFloat(totalAmountSpan.textContent) || 0;
         modalTotalAmountSpan.textContent = total;
         modalAmountReceivedInput.value = '0'; // 初期値は0
@@ -252,85 +278,90 @@ document.addEventListener('DOMContentLoaded', () => {
     function closePaymentConfirmModal() {
         if(paymentConfirmModal) paymentConfirmModal.classList.add('hidden');
     }
-    closePaymentModalButtonForPayment?.addEventListener('click', closePaymentConfirmModal); // closePaymentConfirmModal を使う
+    closePaymentModalButtonForPayment?.addEventListener('click', closePaymentConfirmModal);
     cancelPaymentButton?.addEventListener('click', closePaymentConfirmModal);
     window.addEventListener('click', (event) => { // モーダル外クリック (会計確認モーダル用)
         if (event.target == paymentConfirmModal) {
-            closePaymentConfirmModal(); // ★★★ 修正 ★★★
+            closePaymentConfirmModal();
         }
     });
 
-    // --- 「支払いを確定する」ボタンの処理 ---
-    confirmPaymentButton?.addEventListener('click', async () => {
-        if (!modalTotalAmountSpan || !modalAmountReceivedInput) return;
+    // 「支払いを確定する」ボタンの処理 (★エラー箇所★)
+    // confirmPaymentButton が null でないことを確認してからイベントリスナーを登録
+    if (confirmPaymentButton) {
+        confirmPaymentButton.addEventListener('click', async () => {
+            console.log("Confirm payment button clicked."); // ★デバッグログ
 
-        const totalAmount = parseFloat(modalTotalAmountSpan.textContent) || 0;
-        const amountReceived = parseFloat(modalAmountReceivedInput.value) || 0;
-        const changeOrShortage = amountReceived - totalAmount;
-
-        if (amountReceived < totalAmount) {
-            alert("お預かり金額が合計金額に足りていません。");
-            return;
-        }
-
-        closePaymentConfirmModal(); // 先にモーダルを閉じる
-
-        let newTicketNumber;
-        try {
-            console.log("Checkout process started...");
-            newTicketNumber = await db.runTransaction(async (transaction) => {
-                const queueDoc = await transaction.get(queueStatusRef);
-                let data = queueDoc.data() || {};
-                if (!queueDoc.exists) {
-                    data = { lastIssuedTicket: 0, servingTicket: 0, waitingCount: 0, makingTickets: [], readyTickets: [] };
-                }
-                const currentLastTicket = data.lastIssuedTicket || 0;
-                const newLastTicket = currentLastTicket + 1;
-                const newMakingTickets = [...(data.makingTickets || []), newLastTicket];
-                const updateData = {
-                    lastIssuedTicket: newLastTicket,
-                    waitingCount: firebase.firestore.FieldValue.increment(1),
-                    makingTickets: newMakingTickets
-                };
-                 if (typeof data.readyTickets === 'undefined') updateData.readyTickets = []; // 既存データにフィールドがなければ初期化
-                 if (typeof data.servingTicket === 'undefined') updateData.servingTicket = 0;
-
-
-                if (!queueDoc.exists) {
-                     transaction.set(queueStatusRef, updateData);
-                } else {
-                     transaction.update(queueStatusRef, updateData);
-                }
-                return newLastTicket;
-            });
-            console.log("New ticket number issued:", newTicketNumber);
-
-            await db.collection('sales').add({
-                timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-                items: cart.map(item => ({ productId: item.id, name: item.name, price: item.price, quantity: item.quantity })),
-                totalAmount: totalAmount,
-                paymentMethod: "cash",
-                ticketNumber: newTicketNumber,
-                status: "completed",
-                amountReceived: amountReceived,
-                changeGiven: changeOrShortage
-            });
-            console.log("Sales data added for ticket:", newTicketNumber);
-
-            if (cart.length > 0 && newTicketNumber) {
-                const kitchenOrderItems = cart.map(item => ({ productId: item.id, name: item.name, quantity: item.quantity }));
-                await addOrderToKitchenQueue(newTicketNumber, kitchenOrderItems);
-            } else {
-                console.warn("Cart was empty or newTicketNumber was not generated when trying to add to kitchen queue.");
+            // 関数スコープ内で再度要素の存在を確認 (VSCodeの指摘とエラー回避のため)
+            if (!modalTotalAmountSpan || !modalAmountReceivedInput) {
+                console.error("Confirm Payment Event: modalTotalAmountSpan or modalAmountReceivedInput is null inside event listener. This should not happen if elements were found initially.");
+                alert("会計処理に必要な要素が見つかりません。");
+                return;
             }
-            alert(`会計完了。\n整理番号: ${newTicketNumber}\n合計: ${totalAmount}円\nお預かり: ${amountReceived}円\nお釣り: ${changeOrShortage}円`);
-            cart = [];
-            renderCart();
-        } catch (error) {
-            console.error("Error during checkout: ", error); alert("会計処理中にエラーが発生しました。");
-        }
-    });
-        // clearCartButton の処理では、カートと合計金額表示のリセットのみでOK
+
+            const totalAmount = parseFloat(modalTotalAmountSpan.textContent) || 0;
+            const amountReceived = parseFloat(modalAmountReceivedInput.value) || 0;
+            const changeOrShortage = amountReceived - totalAmount;
+
+            if (amountReceived < totalAmount) {
+                alert("お預かり金額が合計金額に足りていません。");
+                return;
+            }
+
+            closePaymentConfirmModal();
+
+            let newTicketNumber;
+            try {
+                console.log("Confirm Payment: Checkout process starting in confirmPaymentButton event...");
+                newTicketNumber = await db.runTransaction(async (transaction) => {
+                    const queueDoc = await transaction.get(queueStatusRef);
+                    let data = queueDoc.data() || {};
+                    if (!queueDoc.exists) { data = { lastIssuedTicket: 0, servingTicket: 0, waitingCount: 0, makingTickets: [], readyTickets: [] }; }
+                    const currentLastTicket = data.lastIssuedTicket || 0;
+                    const newLastTicket = currentLastTicket + 1;
+                    const newMakingTickets = [...(data.makingTickets || []), newLastTicket];
+                    const updateData = {
+                        lastIssuedTicket: newLastTicket,
+                        waitingCount: firebase.firestore.FieldValue.increment(1),
+                        makingTickets: newMakingTickets
+                    };
+                    if (typeof data.readyTickets === 'undefined') updateData.readyTickets = [];
+                    if (typeof data.servingTicket === 'undefined') updateData.servingTicket = 0;
+                    if (!queueDoc.exists) { transaction.set(queueStatusRef, updateData); }
+                    else { transaction.update(queueStatusRef, updateData); }
+                    return newLastTicket;
+                });
+                console.log("Confirm Payment: New ticket number issued:", newTicketNumber);
+
+                await db.collection('sales').add({
+                    timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+                    items: cart.map(item => ({ productId: item.id, name: item.name, price: item.price, quantity: item.quantity })),
+                    totalAmount: totalAmount,
+                    paymentMethod: "cash",
+                    ticketNumber: newTicketNumber,
+                    status: "completed",
+                    amountReceived: amountReceived,
+                    changeGiven: changeOrShortage
+                });
+                console.log("Confirm Payment: Sales data added for ticket:", newTicketNumber);
+
+                if (cart.length > 0 && newTicketNumber) {
+                    const kitchenOrderItems = cart.map(item => ({ productId: item.id, name: item.name, quantity: item.quantity }));
+                    await addOrderToKitchenQueue(newTicketNumber, kitchenOrderItems);
+                }
+
+                alert(`会計完了。\n整理番号: ${newTicketNumber}\n合計: ${totalAmount}円\nお預かり: ${amountReceived}円\nお釣り: ${changeOrShortage}円`);
+                cart = [];
+                renderCart();
+            } catch (error) {
+                console.error("Confirm Payment: Error during checkout in confirmPaymentButton event: ", error);
+                alert("会計処理中にエラーが発生しました。");
+            }
+        });
+    } else {
+        // このログは DOMContentLoaded の直後にも出力しているので、ここでは不要かもしれないが、念のため
+        console.error("pos-script.js: ERROR - confirmPaymentButton was not found, so its event listener was NOT attached.");
+    } // clearCartButton の処理では、カートと合計金額表示のリセットのみでOK
     clearCartButton?.addEventListener('click', () => {
         cart = [];
         renderCart(); // 合計金額表示が0になる
@@ -510,7 +541,7 @@ document.addEventListener('DOMContentLoaded', () => {
     refundTransactionButton?.addEventListener('click', async () => { /* ... (既存のコード) ... */ });
 
     async function initializePos() {
-        console.log("pos-script.js: initializePos called."); // ★デバッグログ
+        console.log("pos-script.js: initializePos called.");
         if (typeof firebase === 'undefined' || typeof db === 'undefined') {
             console.error("pos-script.js: initializePos - Firebase or DB not initialized.");
             return;
@@ -546,6 +577,6 @@ document.addEventListener('DOMContentLoaded', () => {
         console.log("pos-script.js: Added DOMContentLoaded listener for initializePos.");
     } else { // DOMが既に読み込み完了している場合
         console.log("pos-script.js: DOM already loaded, calling initializePos directly.");
-    initializePos();
+        initializePos();
     }
 });
