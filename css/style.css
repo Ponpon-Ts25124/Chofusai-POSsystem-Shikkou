@@ -593,11 +593,11 @@ body.queue-info-body {
 /* --- 厨房画面 (kitchen-display.html) --- */
 body.kitchen-body {
      background-color: #e9ecef;
-     padding-top: 70px;
+     padding-top: 0px; /* ナビゲーションバナーの高さ分 */
 }
 .kitchen-container {
     max-width: 95%;
-    margin: 20px auto;
+    margin: 0px auto;
     padding: 15px;
 }
 .kitchen-container > h1 {
