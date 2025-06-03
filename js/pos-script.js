@@ -252,7 +252,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function closePaymentConfirmModal() {
         if(paymentConfirmModal) paymentConfirmModal.classList.add('hidden');
     }
-    closePaymentModalButtonForPayment?.addEventListener('click', closePaymentModal); // closePaymentModal_PaymentConfirm を使う
+    closePaymentModalButtonForPayment?.addEventListener('click', closePaymentConfirmModal); // closePaymentConfirmModal を使う
     cancelPaymentButton?.addEventListener('click', closePaymentConfirmModal);
     window.addEventListener('click', (event) => { // モーダル外クリック (会計確認モーダル用)
         if (event.target == paymentConfirmModal) {
