@@ -1,96 +1,104 @@
 // js/kitchen-script.js
+
 document.addEventListener('DOMContentLoaded', () => {
     const kitchenOrderListDiv = document.getElementById('kitchen-order-list');
+    const db = firebase.firestore();
 
-    if (typeof db === 'undefined') {
-        console.error("Firestore 'db' instance is not defined in kitchen-script.");
-        if (kitchenOrderListDiv) kitchenOrderListDiv.innerHTML = '<p style="color:red;">データベース接続エラー</p>';
-        return;
-    }
-
-    console.log("kitchen-script.js: Setting up Firestore listener for kitchenQueue...");
-
+    // kitchenQueueコレクションをリアルタイムで監視
     db.collection('kitchenQueue')
       .orderBy('orderTimestamp', 'asc')
       .onSnapshot(snapshot => {
-        console.log("kitchen-script.js: kitchenQueue snapshot received. Empty:", snapshot.empty, "Size:", snapshot.size);
-        if (!kitchenOrderListDiv) {
-            console.error("kitchenOrderListDiv is not found!");
-            return;
-        }
-        kitchenOrderListDiv.innerHTML = '';
+          kitchenOrderListDiv.innerHTML = ''; // リストをクリア
 
-        if (snapshot.empty) {
-            console.log("kitchen-script.js: No orders in kitchen queue.");
-            kitchenOrderListDiv.innerHTML = '<p>現在、作成待ちの注文はありません。</p>';
-            return;
-        }
+          if (snapshot.empty) {
+              kitchenOrderListDiv.innerHTML = '<p>現在、作成待ちの注文はありません。</p>';
+              return;
+          }
 
-        snapshot.forEach(doc => {
-            const order = doc.data();
-            console.log("kitchen-script.js: Processing order data:", order);
+          snapshot.forEach(doc => {
+              const order = doc.data();
+              const orderCard = createOrderCard(order);
+              kitchenOrderListDiv.appendChild(orderCard);
+          });
+      }, error => {
+          console.error("厨房リストの監視エラー: ", error);
+          kitchenOrderListDiv.innerHTML = '<p style="color: red;">データの取得に失敗しました。</p>';
+      });
 
-            if (order.orderTimestamp && typeof order.orderTimestamp.toDate === 'function') {
-                const orderCard = createOrderCard(order);
-                kitchenOrderListDiv.appendChild(orderCard);
-            } else {
-                console.warn("kitchen-script.js: Skipping order due to invalid or missing orderTimestamp:", JSON.stringify(order));
-            }
-        });
-    }, error => {
-        console.error("kitchen-script.js: Error fetching kitchen queue: ", error);
-        if (kitchenOrderListDiv) kitchenOrderListDiv.innerHTML = `<p style="color:red;">リストの読み込みに失敗しました。エラー: ${error.message}</p>`;
-    });
-
+    // 注文カードのHTMLを生成する関数
     function createOrderCard(order) {
         const card = document.createElement('div');
-        card.classList.add('order-card');
-        card.dataset.ticketNumber = order.ticketNumber;
+        card.className = 'order-card';
+        card.id = `order-${order.ticketNumber}`;
 
-        const orderTime = order.orderTimestamp.toDate();
-        const timeElapsedMs = Date.now() - orderTime.getTime();
-        const minutesElapsed = Math.floor(timeElapsedMs / (1000 * 60));
-        const secondsElapsed = Math.floor((timeElapsedMs % (1000 * 60)) / 1000);
+        const itemsHtml = order.items.map(item => 
+            `<li class="order-items-list-item">
+                <span class="item-name">${item.name}</span>
+                <span class="item-quantity">x ${item.quantity}</span>
+            </li>`
+        ).join('');
 
-        if (minutesElapsed >= 10) card.classList.add('urgent');
-
-        let itemsHtml = '<ul class="order-items-list">';
-        if (order.items && Array.isArray(order.items)) {
-            order.items.forEach(item => {
-                itemsHtml += `<li><span class="item-name">${item.name || '商品名不明'}</span>: <span class="item-quantity">${item.quantity || 0}個</span></li>`;
-            });
-        }
-        itemsHtml += '</ul>';
+        const timeElapsed = calculateTimeElapsed(order.orderTimestamp);
 
         card.innerHTML = `
             <div class="order-header">
                 <h3>整理番号: ${order.ticketNumber}</h3>
-                <span class="time-elapsed" data-timestamp="${orderTime.getTime()}">経過: ${minutesElapsed}分 ${secondsElapsed}秒</span>
+                <span class="time-elapsed">${timeElapsed}</span>
             </div>
-            ${itemsHtml}
+            <ul class="order-items-list">
+                ${itemsHtml}
+            </ul>
+            <button class="complete-btn" data-ticket-number="${order.ticketNumber}">調理完了</button>
         `;
+
+        // 「調理完了」ボタンにイベントリスナーを設定
+        card.querySelector('.complete-btn').addEventListener('click', handleCompletion);
+
         return card;
     }
 
-    setInterval(() => {
-        const timeSpans = document.querySelectorAll('.order-card .time-elapsed');
-        timeSpans.forEach(span => {
-            const orderTimestamp = parseInt(span.dataset.timestamp, 10);
-            if (isNaN(orderTimestamp)) return;
+    // 調理完了ボタンが押されたときの処理
+    async function handleCompletion(event) {
+        const ticketNumber = parseInt(event.target.dataset.ticketNumber);
+        if (isNaN(ticketNumber)) return;
+        
+        if (!confirm(`整理番号 ${ticketNumber} を調理完了にしますか？`)) return;
 
-            const timeElapsedMs = Date.now() - orderTimestamp;
-            const minutesElapsed = Math.floor(timeElapsedMs / (1000 * 60));
-            const secondsElapsed = Math.floor((timeElapsedMs % (1000 * 60)) / 1000);
-            span.textContent = `経過: ${minutesElapsed}分 ${secondsElapsed}秒`;
+        const db = firebase.firestore();
+        const queueStatusRef = db.collection('queue').doc('currentStatus');
 
-            const card = span.closest('.order-card');
-            if (card) {
-                if (minutesElapsed >= 10 && !card.classList.contains('urgent')) {
-                    card.classList.add('urgent');
-                } else if (minutesElapsed < 10 && card.classList.contains('urgent')) {
-                    card.classList.remove('urgent');
-                }
-            }
-        });
-    }, 10000);
+        try {
+            // トランザクションでキューの状態を更新
+            await db.runTransaction(async (transaction) => {
+                const queueDoc = await transaction.get(queueStatusRef);
+                if (!queueDoc.exists) throw "キューの状態ドキュメントが見つかりません。";
+
+                let makingTickets = queueDoc.data().makingTickets || [];
+                // makingTicketsから完了した番号を削除
+                makingTickets = makingTickets.filter(num => num !== ticketNumber);
+
+                transaction.update(queueStatusRef, {
+                    makingTickets: makingTickets,
+                    readyTickets: firebase.firestore.FieldValue.arrayUnion(ticketNumber)
+                });
+            });
+
+            // kitchenQueueから完了した注文を削除
+            await db.collection('kitchenQueue').doc(String(ticketNumber)).delete();
+
+            console.log(`整理番号 ${ticketNumber} を完了しました。`);
+        } catch (error) {
+            console.error("調理完了処理エラー: ", error);
+            alert("調理完了処理中にエラーが発生しました。");
+        }
+    }
+
+    // 経過時間を計算する関数
+    function calculateTimeElapsed(timestamp) {
+        if (!timestamp) return '---';
+        const now = new Date();
+        const orderTime = timestamp.toDate();
+        const diffMinutes = Math.floor((now - orderTime) / 60000);
+        return `${diffMinutes}分前`;
+    }
 });

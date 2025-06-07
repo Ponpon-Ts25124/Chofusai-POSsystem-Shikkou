@@ -1,677 +1,157 @@
 /* --- グローバル & 基本スタイル --- */
+:root {
+    --lawson-blue: #00a0e9;
+    --dark-blue: #0056b9;
+    --text-dark: #333;
+    --text-light: #fff;
+    --bg-gray: #f0f2f5;
+    --footer-bg: #e9ecef;
+    --orange: #f97316;
+    --red: #ef4444;
+    --green: #16a34a;
+    --yellow: #facc15;
+}
+
 body {
-    font-family: sans-serif;
+    font-family: "Meiryo UI", "Hiragino Kaku Gothic ProN", "ヒラギノ角ゴ ProN W3", "メイリオ", Meiryo, sans-serif;
     margin: 0;
-    background-color: #f0f0f0; /* ページ全体の背景色 */
-    padding-top: 70px; /* 上部ナビゲーションバナーの高さに応じて調整 */
-    line-height: 1.6;
-}
-
-/* --- 上部ナビゲーションバナー --- */
-.top-navigation-banner {
-    background-color: #333;
-    padding: 15px 0;
-    width: 100%;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-    text-align: center;
-    position: fixed;
-    top: 0;
-    left: 0;
-    z-index: 1000;
-    height: 60px; /* 高さを固定 */
-}
-.top-navigation-banner nav ul {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-    display: inline-block;
-}
-.top-navigation-banner nav li {
-    display: inline-block;
-    margin: 0 10px;
-}
-.top-navigation-banner nav a {
-    color: white;
-    text-decoration: none;
-    padding: 10px 15px;
-    border: 1px solid #555;
-    border-radius: 5px;
-    background-color: #4CAF50;
-    transition: background-color 0.3s ease;
-    font-size: 0.9em;
-}
-.top-navigation-banner nav a:hover,
-.top-navigation-banner nav a.active {
-    background-color: #3e8e41;
-    border-color: #777;
-}
-
-
-/* --- ログインコンテナ (admin.html) --- */
-#login-container {
-    width: 100%;
-    max-width: 400px;
-    margin: 100px auto 50px auto;
-    padding: 30px;
-    background-color: #fff;
-    border-radius: 8px;
-    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-}
-#login-container h1 {
-    text-align: center;
-    margin-bottom: 25px;
-    font-size: 1.8em;
-    color: #333;
-}
-#login-container input[type="email"],
-#login-container input[type="password"] {
-    width: calc(100% - 24px);
-    padding: 12px;
-    margin-bottom: 18px;
-    border: 1px solid #ccc;
-    border-radius: 4px;
-    font-size: 1em;
-}
-#login-container button#login-button {
-    width: 100%;
-    padding: 12px;
-    background-color: #007bff;
-    color: white;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 1.1em;
-    transition: background-color 0.3s ease;
-}
-#login-container button#login-button:hover {
-    background-color: #0056b3;
-}
-#login-error {
-    color: red;
-    margin-bottom: 15px;
-    text-align: center;
-    min-height: 1.2em;
-}
-
-/* --- ダッシュボードコンテナ (admin.html) --- */
-.dashboard-container {
-    max-width: 90%;
-    margin: 20px auto;
-    background-color: #fff;
-    padding: 25px;
-    border-radius: 8px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-}
-.dashboard-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 30px;
-    border-bottom: 2px solid #e0e0e0;
-    padding-bottom: 15px;
-}
-.dashboard-header h1 {
-    margin: 0;
-    font-size: 2em;
-    color: #333;
-}
-.logout-btn {
-    padding: 8px 15px;
-    background-color: #dc3545;
-    color: white;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 0.9em;
-    transition: background-color 0.3s ease;
-}
-.logout-btn:hover {
-    background-color: #c82333;
-}
-.controls-section {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 15px;
-    margin-bottom: 30px;
-    padding: 15px;
-    background-color: #f9f9f9;
-    border-radius: 6px;
-    border: 1px solid #eee;
-}
-.control-group {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-.control-group label {
-    font-weight: bold;
-    color: #555;
-    white-space: nowrap;
-}
-.control-group input[type="date"],
-.control-group select {
-    padding: 8px 10px;
-    border: 1px solid #ccc;
-    border-radius: 4px;
-    font-size: 0.9em;
-}
-.separator-text span {
-    color: #777;
-    font-style: italic;
-}
-#custom-range-picker { /* IDセレクタに変更（以前 .custom-range-inputs だった箇所） */
-    display: flex; /* hiddenクラスが外れた時のデフォルトの表示形式 */
-    gap: 10px;
-    align-items: center;
-}
-.end-date-label {
-    margin-left: 10px;
-}
-.refresh-btn {
-    padding: 9px 18px;
-    background-color: #28a745;
-    color: white;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 0.95em;
-    transition: background-color 0.3s ease;
-}
-.refresh-btn:hover {
-    background-color: #218838;
-}
-.main-content-area {
-    display: flex;
-    gap: 30px;
-}
-.charts-area {
-    flex: 3;
-    display: flex;
-    flex-direction: column;
-    gap: 30px;
-}
-.sidebar-area {
-    flex: 1;
-    background-color: #f9f9f9;
-    padding: 20px;
-    border-radius: 6px;
-    border: 1px solid #eee;
-    min-width: 250px;
-}
-.chart-section h2,
-.queue-status-section h2 {
-    font-size: 1.5em;
-    color: #444;
-    margin-top: 0;
-    margin-bottom: 15px;
-    border-bottom: 1px solid #ddd;
-    padding-bottom: 8px;
-}
-.chart-container {
-    width: 100%;
-    position: relative;
-    height: 400px;
-}
-.no-data-message {
-    text-align: center;
-    padding: 50px;
-    color: #777;
-    font-style: italic;
-}
-.queue-status-section p {
-    margin-bottom: 10px;
-    font-size: 0.95em;
-}
-.queue-status-section span {
-    font-weight: bold;
-    color: #007bff;
-}
-/* 管理者画面の表示モード選択 */
-.display-mode-selector {
-    margin-top: 20px;
-    padding: 15px;
-    background-color: #f0f0f0;
-    border-radius: 5px;
-    margin-bottom: 20px; /* 他の要素との間にスペース */
-}
-.display-mode-selector label {
-    margin-right: 10px;
-    font-weight: bold;
-}
-.display-mode-selector select {
-    padding: 8px;
-    border-radius: 4px;
-    border: 1px solid #ccc;
-}
-.display-mode-selector button {
-    margin-left: 10px;
-    padding: 8px 15px;
-    /* refresh-btnクラスを流用しても良い */
-}
-
-
-/* --- POS画面 (pos.html) --- */
-/* POS画面のお預かり・お釣り */
-.payment-details {
-    margin: 15px 0;
-    padding: 10px;
-    border: 1px solid #eee;
-    border-radius: 4px;
-    background-color: #f9f9f9;
-}
-.payment-details div {
-    margin-bottom: 8px;
-    display: flex;
-    align-items: center;
-}
-.payment-details label {
-    margin-right: 10px;
-    font-weight: bold;
-}
-#amount-received {
-    padding: 8px;
-    border: 1px solid #ccc;
-    border-radius: 4px;
-    width: 100px; /* 幅調整 */
-    margin-right: 5px;
-}
-.payment-details p {
-    font-size: 1.1em;
-    font-weight: bold;
-    color: #28a745; /* お釣りの色 */
-    margin: 0;
-}
-.pos-container {
-    display: flex;
-    width: 90%;
-    max-width: 1000px;
-    background-color: #fff;
-    box-shadow: 0 0 10px rgba(0,0,0,0.1);
-    border-radius: 8px;
+    background-color: var(--bg-gray); /* 基本の背景色 */
+    color: var(--text-dark);
+    -webkit-font-smoothing: antialiased;
+    height: 100vh;
     overflow: hidden;
-    margin: 20px auto;
-}
-.products-area {
-    flex: 2;
-    padding: 20px;
-    border-right: 1px solid #eee;
-}
-.products-area h2 { margin-top: 10; }
-#product-list {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
-    gap: 10px;
-}
-#product-list button {
-    padding: 55px 10px;
-    background-color: #5cb85c;
-    color: white;
-    border: none;
-    border-radius: 5px;
-    cursor: pointer;
-    font-size: 1em;
-}
-#product-list button:hover {
-    background-color: #4cae4c;
-}
-.cart-area {
-    flex: 1;
-    padding: 20px;
-    display: flex;
-    flex-direction: column;
-}
-.cart-area h2 { margin-top: 0; }
-#cart-items {
-    list-style: none;
-    padding: 0;
-    min-height: 150px;
-    border-bottom: 1px solid #eee;
-    margin-bottom: 15px;
-    flex-grow: 1;
-    overflow-y: auto;
-}
-#cart-items li {
-    padding: 8px 0;
-    border-bottom: 1px dashed #eee;
-    display: flex;
-    justify-content: space-between;
-}
-#cart-items li:last-child {
-    border-bottom: none;
-}
-.cart-summary { margin-bottom: 15px; }
-.cart-summary p {
-    font-size: 1.2em;
-    font-weight: bold;
-    margin-bottom: 10px;
-}
-.cart-summary button, .queue-management button, .transaction-management button {
-    padding: 10px 15px;
-    margin-top: 5px;
-    margin-right: 5px;
-    border: none;
-    border-radius: 5px;
-    cursor: pointer;
-    font-size: 1em;
-}
-#checkout-button { background-color: #007bff; color: white; }
-#checkout-button:hover { background-color: #0056b3; }
-#clear-cart-button { background-color: #f0ad4e; color: white; }
-#clear-cart-button:hover { background-color: #ec971f; }
-
-.queue-management {
-    margin-top: 20px;
-    padding-top: 15px;
-    border-top: 1px solid #eee;
-}
-#next-customer-button { background-color: #d9534f; color: white; }
-#next-customer-button:hover { background-color: #c9302c; }
-
-.transaction-management {
-    margin-top: 20px;
-    padding-top: 15px;
-    border-top: 1px solid #eee;
-}
-.transaction-management h3 { margin-bottom: 10px; }
-.transaction-management div { margin-bottom: 10px; }
-#search-ticket-number { padding: 8px; border-radius: 4px; border: 1px solid #ccc; margin-right: 5px;}
-#search-transaction-button { background-color: #17a2b8; color: white; }
-#search-transaction-button:hover { background-color: #138496; }
-#transaction-details {
-    margin-top:10px;
-    padding:10px;
-    border:1px solid #eee;
-    border-radius: 4px;
-    background-color: #f9f9f9;
-}
-#transaction-details h4 { margin-top: 0; }
-#transaction-details ul { padding-left: 20px; }
-#refund-transaction-button, #cancel-latest-transaction-button {
-    background-color: #6c757d; color:white;
-}
-#refund-transaction-button:hover, #cancel-latest-transaction-button:hover { background-color: #545b62; }
-
-.ticket-management-area {
-    margin-top: 20px;
-    padding-top: 15px;
-    border-top: 1px solid #eee;
-}
-.ticket-management-area h3 {
-    margin-bottom: 10px;
-}
-.current-ticket-info {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    flex-wrap: wrap;
-}
-.current-ticket-info p { margin: 0; }
-#ticket-number-input {
-    padding: 8px;
-    border: 1px solid #ccc;
-    border-radius: 4px;
-    width: 80px;
-}
-#open-ticket-options-button {
-    padding: 8px 12px;
-    background-color: #6c757d;
-    color: white;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-}
-#open-ticket-options-button:hover { background-color: #5a6268; }
-
-/* POS画面のお預かり・お釣り (モーダル用) */
-.payment-modal-content { /* 会計モーダル専用の調整 */
-    max-width: 450px; /* 少し広めにする */
-}
-.modal-payment-input {
-    display: flex;
-    align-items: center;
-    justify-content: center; /* 中央寄せ */
-    margin: 15px 0;
-    font-size: 1.1em;
-}
-.modal-payment-input label {
-    margin-right: 10px;
-}
-#modal-amount-received {
-    padding: 8px;
-    border: 1px solid #ccc;
-    border-radius: 4px;
-    width: 120px;
-    text-align: right; /* 金額なので右寄せ */
-    font-size: 1.1em;
-    margin-right: 5px;
-}
-#keypad-container {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr); /* 3列のグリッド */
-    gap: 10px; /* ボタン間の隙間 */
-    margin: 20px auto;
-    max-width: 300px; /* キーパッド全体の幅 */
-}
-#keypad-container button {
-    padding: 15px;
-    font-size: 1.5em;
-    background-color: #f0f0f0;
-    border: 1px solid #ccc;
-    border-radius: 5px;
-    cursor: pointer;
-    transition: background-color 0.2s;
-}
-#keypad-container button:hover {
-    background-color: #e0e0e0;
-}
-#keypad-container button.keypad-clear,
-#keypad-container button.keypad-bs { /* クリアとバックスペースボタン */
-    background-color: #ffc107; /* 黄色系 */
-    color: #333;
-}
-#keypad-container button.keypad-clear:hover,
-#keypad-container button.keypad-bs:hover {
-    background-color: #e0a800;
 }
 
-#modal-change-display {
-    font-size: 1.3em;
-    font-weight: bold;
-    margin: 20px 0;
-}
-#modal-change-display.不足 { /* 不足額の場合のスタイル */
-    color: #dc3545; /* 赤色 */
-}
-#confirm-payment-button {
-    background-color: #28a745; /* 緑系 */
-    color: white;
-}
-#confirm-payment-button:hover {
-    background-color: #218838;
-}
+/* =================================================== */
+/*               1. POS画面 (pos.html)                 */
+/* =================================================== */
 
-.modal {
+/* --- ログインモーダル --- */
+.login-overlay {
     position: fixed;
-    z-index: 1001;
-    left: 0;
-    top: 0;
-    width: 100%;
-    height: 100%;
-    overflow: auto;
-    background-color: rgba(0,0,0,0.4);
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background-color: rgba(0, 0, 0, 0.6);
     display: flex;
     align-items: center;
     justify-content: center;
+    z-index: 2000;
 }
-.modal-content {
-    background-color: #fefefe;
-    margin: auto;
-    padding: 20px;
-    border: 1px solid #888;
-    width: 80%;
-    max-width: 400px;
-    border-radius: 8px;
-    box-shadow: 0 4px 8px 0 rgba(0,0,0,0.2),0 6px 20px 0 rgba(0,0,0,0.19);
+.login-modal-content {
+    background-color: var(--bg-gray);
+    padding: 40px;
+    border-radius: 12px;
     text-align: center;
-    position: relative;
+    width: 90%;
+    max-width: 400px;
 }
-.modal-content h4 {
-    margin-top: 0;
-    margin-bottom: 20px;
+.login-icon {
+    width: 80px; height: 80px;
+    margin: 0 auto 15px;
+    background-color: var(--lawson-blue);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
 }
-.modal-content button {
-    display: block;
-    width: calc(100% - 20px);
-    padding: 12px;
-    margin: 10px auto;
-    border: none;
-    border-radius: 5px;
-    cursor: pointer;
-    font-size: 1em;
-}
-#modal-option-cancel-order { background-color: #f0ad4e; color: white; }
-#modal-option-cancel-order:hover { background-color: #ec971f; }
-#modal-option-mark-served { background-color: #5cb85c; color: white; }
-#modal-option-mark-served:hover { background-color: #4cae4c; }
-#modal-option-back { background-color: #6c757d; color: white; }
-#modal-option-back:hover { background-color: #5a6268; }
-
-.close-modal-button {
-    color: #aaa;
-    position: absolute;
-    top: 10px;
-    right: 15px;
-    font-size: 28px;
-    font-weight: bold;
-    line-height: 1;
-}
-.close-modal-button:hover,
-.close-modal-button:focus {
-    color: black;
-    text-decoration: none;
-    cursor: pointer;
+.login-icon svg { width: 48px; height: 48px; color: var(--text-light); }
+.login-title { font-size: 1.8em; margin-bottom: 25px; }
+.login-input-group { display: flex; align-items: center; margin-bottom: 25px; }
+.login-input-group label { font-weight: bold; margin-right: 15px; white-space: nowrap; }
+.login-input-group input { flex-grow: 1; padding: 12px; border: 1px solid #ccc; border-radius: 8px; font-size: 1em; }
+.login-submit-btn {
+    width: 100%; padding: 15px;
+    background-color: var(--lawson-blue); color: var(--text-light);
+    border: none; border-radius: 8px; font-size: 1.2em; font-weight: bold; cursor: pointer;
 }
 
-/* --- 整理番号表示画面 (queue-display.html) --- */
-body.queue-info-body {
+/* --- メインコンテナ --- */
+.modern-pos-container {
+    display: flex;
+    width: 100vw;
+    height: calc(100vh - 80px); /* フッターの高さを引く */
+}
+
+/* --- 左側：カートエリア --- */
+.cart-display-area {
+    flex: 7;
     display: flex;
     flex-direction: column;
-    align-items: center;
-    text-align: center;
-    background-color: #333;
-    color: white;
-    min-height: 100vh;
-    box-sizing: border-box;
-    padding-top: 70px; /* バナーの高さ分 */
-}
-.queue-info { /* 通常表示用 */
-    background-color: #444;
-    padding: 30px;
-    border-radius: 10px;
-    box-shadow: 0 0 20px rgba(0,0,0,0.5);
-    margin-top: 30px;
-    margin-bottom: 30px;
-    width: 90%;
-    max-width: 600px;
-}
-.queue-info h1 {
-    font-size: 2.2em;
-    margin-top: 0;
-    margin-bottom: 15px;
-}
-#serving-number {
-    font-size: 7em;
-    font-weight: bold;
-    color: #ffc107;
-    margin: 15px 0;
-    display: block;
-}
-#waiting-count, #last-issued-number {
-    font-size: 1.6em;
-    margin-top: 12px;
-}
-.auto-refresh-note {
-    margin-top: 25px;
-    font-size: 0.9em;
-    color: #ccc;
-}
-/* 2段階表示用 */
-#dual-display { /* 初期はJSでhiddenクラスが付いている想定 */
-    width: 100%;
-    text-align: center;
-    padding: 0 15px; /* 左右にパディング */
+    background-color: #dbeafe; /* 明るい青背景 */
+    padding: 10px;
     box-sizing: border-box;
 }
-.dual-display-container {
-    display: flex;
-    width: 100%;
-    max-width: 1000px; /* 2列表示の最大幅 */
-    margin: 20px auto; /* 上下左右中央寄せ */
-    justify-content: space-around;
-    gap: 20px;
-}
-.status-column {
-    background-color: #555;
-    padding: 20px;
-    border-radius: 8px;
-    flex: 1;
-    min-width: 250px;
-    max-width: 48%; /* 画面が広い時に広がりすぎないように */
-    box-sizing: border-box;
-}
-.status-column h2 {
-    color: #ffc107;
-    font-size: 2em;
-    margin-top: 0;
-    margin-bottom: 15px;
-    border-bottom: 1px solid #777;
-    padding-bottom: 10px;
-}
-.ticket-list {
-    list-style: none;
-    padding: 0;
-    margin: 0; /* デフォルトマージンをリセット */
-    max-height: 300px;
-    overflow-y: auto;
-    text-align: center; /* 番号を中央に */
-}
-.ticket-list li {
-    font-size: 2.5em;
-    color: white;
-    padding: 8px 0;
-    border-bottom: 1px dashed #666;
-}
-.ticket-list li:last-child {
-    border-bottom: none;
-}
-.ticket-list li.now-serving {
-    color: #a5d6a7;
-    font-weight: bold;
-}
-.no-tickets-message { /* .ticket-list li.no-tickets-message でも可 */
-    font-size: 1.5em;
-    color: #aaa;
-    margin-top: 20px;
-    padding: 10px 0; /* liとして扱うなら */
-    border-bottom: none; /* メッセージには不要 */
-}
+.pos-header { display: flex; align-items: center; background-color: #f8fafc; padding: 5px 10px; border-radius: 4px; font-size: 0.9em; border: 1px solid #ccc; }
+.header-title { font-weight: bold; margin-right: auto; }
+.header-time { color: #555; margin-right: 20px; }
+.header-status { display: flex; align-items: center; }
+.help-icon { display: inline-block; width: 20px; height: 20px; background-color: var(--lawson-blue); color: var(--text-light); border-radius: 50%; text-align: center; font-weight: bold; line-height: 20px; margin-left: 10px; }
+.pos-main-alert { padding: 10px; margin: 10px 0; font-size: 1.1em; }
+.cart-content-wrapper { flex-grow: 1; overflow: hidden; background-color: #fff; border-radius: 4px; border: 1px solid #ccc; }
+.cart-table-container { height: 100%; overflow-y: auto; }
+#cart-table { width: 100%; border-collapse: collapse; }
+#cart-table tr.table-header { font-weight: bold; background-color: #e2e8f0; position: sticky; top: 0; z-index: 10; }
+#cart-table td { padding: 12px 10px; border-bottom: 1px solid #eee; vertical-align: middle; }
+.remove-item-btn { width: 28px; height: 28px; background-color: var(--red); color: white; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; }
+.cart-total-area { margin-top: auto; }
+.total-box { display: flex; justify-content: space-between; align-items: center; background-color: #fff; padding: 10px 20px; border: 1px solid #ccc; border-radius: 4px; margin-top: 10px; }
+.total-label { font-size: 1.5em; font-weight: bold; }
+.total-amount-display { font-size: 2em; font-weight: bold; }
+.pos-checkout-area { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
+.checkout-btn { padding: 20px; font-size: 1.5em; font-weight: bold; border: none; border-radius: 8px; cursor: pointer; }
+.checkout-btn.cash { background-color: var(--orange); color: white; }
+.checkout-btn.other.disabled { background-color: #d1d5db; color: #6b7280; cursor: not-allowed; }
 
+/* --- 右側：機能パネルエリア --- */
+.function-panel-area { flex: 5; display: flex; flex-direction: column; background-color: #fff; border-left: 1px solid #ccc; }
+.pos-tabs { display: flex; background-color: #e2e8f0; }
+.tab-button { flex: 1; padding: 15px 10px; border: none; border-right: 1px solid #ccc; background-color: transparent; color: #555; cursor: pointer; font-size: 1.1em; font-weight: bold; }
+.tab-button:last-child { border-right: none; }
+.tab-button.active { background-color: #fff; color: var(--text-dark); border-bottom: 3px solid var(--lawson-blue); }
+.tab-content-container { flex-grow: 1; padding: 15px; overflow-y: auto; }
+.tab-content { display: none; }
+.tab-content.active { display: block; }
+.item-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 10px; }
+.item-grid button { padding: 20px 10px; background-color: #f8fafc; border: 1px solid #ccc; color: var(--text-dark); font-size: 1em; font-weight: bold; border-radius: 8px; cursor: pointer; }
 
-/* --- 厨房画面 (kitchen-display.html) --- */
+/* --- フッターバー --- */
+.pos-footer { position: fixed; bottom: 0; left: 0; width: 100%; height: 80px; background-color: var(--footer-bg); border-top: 1px solid #ccc; display: flex; align-items: center; justify-content: space-around; padding: 0 10px; box-sizing: border-box; z-index: 1000; }
+.footer-btn { display: flex; flex-direction: column; align-items: center; justify-content: center; background: none; border: none; cursor: pointer; font-size: 0.8em; color: #555; flex: 1; height: 100%; }
+.footer-icon { width: 32px; height: 32px; margin-bottom: 4px; color: var(--dark-blue); }
+.alert-badge-wrapper { position: relative; }
+.alert-badge { position: absolute; top: -5px; right: -8px; background-color: var(--red); color: white; border-radius: 50%; width: 20px; height: 20px; font-size: 0.9em; font-weight: bold; display: flex; align-items: center; justify-content: center; }
+
+/* --- 会計モーダル --- */
+.modal { position: fixed; z-index: 1001; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center; }
+.modal-content { background-color: #fefefe; padding: 25px; border-radius: 8px; width: 90%; max-width: 450px; box-shadow: 0 5px 15px rgba(0,0,0,0.5); text-align: center; position: relative; }
+.close-modal-button { color: #aaa; position: absolute; top: 10px; right: 15px; font-size: 28px; font-weight: bold; cursor: pointer; }
+.modal-content h4 { margin-top: 0; font-size: 1.5em; margin-bottom: 20px; }
+.modal-payment-input { display: flex; align-items: center; justify-content: center; margin: 20px 0; font-size: 1.2em; }
+#modal-amount-received { padding: 10px; border: 1px solid #ccc; border-radius: 4px; width: 150px; text-align: right; font-size: 1.1em; margin: 0 10px; }
+#modal-change-display { font-size: 1.4em; font-weight: bold; margin: 20px 0; }
+#modal-change-display.不足 { color: var(--red); }
+.keypad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 20px auto; max-width: 300px; }
+.keypad button { padding: 18px; font-size: 1.5em; background-color: #f0f2f5; border: 1px solid #ccc; border-radius: 5px; cursor: pointer; }
+.keypad button.keypad-clear, .keypad button.keypad-bs { background-color: var(--yellow); }
+.confirm-btn, .cancel-btn { padding: 12px; font-size: 1.1em; font-weight: bold; border: none; border-radius: 5px; cursor: pointer; width: 48%; }
+.confirm-btn { background-color: var(--green); color: white; }
+.cancel-btn { background-color: #64748b; color: white; }
+
+/* =================================================== */
+/*        2. 厨房画面 (kitchen-display.html)          */
+/* =================================================== */
+
 body.kitchen-body {
-     background-color: #e9ecef;
-     padding-top: 0px; /* ナビゲーションバナーの高さ分 */
+    background-color: #f8fafc;
+    overflow-y: auto;
 }
 .kitchen-container {
     max-width: 95%;
-    margin: 0px auto;
+    margin: 20px auto;
     padding: 15px;
 }
 .kitchen-container > h1 {
     text-align: center;
     margin-bottom: 25px;
-    color: #343a40;
+    color: var(--text-dark);
 }
 #kitchen-order-list {
     display: grid;
@@ -684,14 +164,8 @@ body.kitchen-body {
     border-radius: 8px;
     padding: 20px;
     box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-    transition: transform 0.2s ease-in-out;
-}
-.order-card:hover {
-    transform: translateY(-3px);
-}
-.order-card.urgent {
-    border-left: 6px solid #dc3545;
-    background-color: #fff5f5;
+    display: flex;
+    flex-direction: column;
 }
 .order-header {
     display: flex;
@@ -704,7 +178,7 @@ body.kitchen-body {
 .order-header h3 {
     margin: 0;
     font-size: 1.8em;
-    color: #007bff;
+    color: var(--lawson-blue);
 }
 .order-header .time-elapsed {
     font-size: 0.95em;
@@ -714,114 +188,135 @@ body.kitchen-body {
 .order-items-list {
     list-style: none;
     padding: 0;
-    margin-top: 10px;
+    margin-bottom: 15px;
+    flex-grow: 1;
 }
-.order-items-list li {
+.order-items-list-item {
     padding: 6px 0;
     font-size: 1.1em;
     border-bottom: 1px dashed #f0f0f0;
+    display: flex;
+    justify-content: space-between;
 }
-.order-items-list li:last-child {
-    border-bottom: none;
-}
-.order-items-list .item-name {
+.order-items-list-item:last-child { border-bottom: none; }
+.item-name { font-weight: bold; color: #333; }
+.item-quantity { color: #666; }
+.complete-btn {
+    padding: 12px;
+    font-size: 1.1em;
     font-weight: bold;
-    color: #333;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    background-color: var(--green);
+    color: white;
+    margin-top: auto; /* カードの最下部に配置 */
 }
-.order-items-list .item-quantity {
-    color: #666;
-    margin-left: 5px;
+
+/* =================================================== */
+/*        3. 呼び出し画面 (queue-display-*.html)      */
+/* =================================================== */
+
+body.queue-info-body {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    background-color: #333;
+    color: white;
+    min-height: 100vh;
+    box-sizing: border-box;
+    padding: 20px;
+    overflow-y: auto;
+}
+
+/* --- 通常表示 (normal-display) --- */
+.queue-info {
+    background-color: #444;
+    padding: 30px;
+    border-radius: 10px;
+    box-shadow: 0 0 20px rgba(0,0,0,0.5);
+    width: 90%;
+    max-width: 600px;
+}
+.queue-info h1 {
+    font-size: 2.2em;
+    margin-top: 0;
+    margin-bottom: 15px;
+}
+#serving-number {
+    font-size: 7em;
+    font-weight: bold;
+    color: var(--yellow);
+    margin: 15px 0;
+    display: block;
+}
+#waiting-count, #last-issued-number {
+    font-size: 1.6em;
+    margin-top: 12px;
+}
+
+/* --- 2段階表示 (dual-display) --- */
+.dual-display-container {
+    display: flex;
+    width: 100%;
+    max-width: 1200px; /* 横幅を広げる */
+    margin: 20px auto;
+    justify-content: space-around;
+    gap: 30px;
+}
+.status-column {
+    background-color: #555;
+    padding: 25px;
+    border-radius: 8px;
+    flex: 1;
+    min-width: 300px;
+    max-width: 48%;
+    box-sizing: border-box;
+}
+.status-column h2 {
+    color: var(--yellow);
+    font-size: 2.5em;
+    margin-top: 0;
+    margin-bottom: 20px;
+    border-bottom: 2px solid #777;
+    padding-bottom: 15px;
+}
+.ticket-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    min-height: 200px;
+}
+.ticket-list li {
+    font-size: 3em;
+    color: white;
+    padding: 10px 0;
+    border-bottom: 1px dashed #666;
+}
+.ticket-list li:last-child { border-bottom: none; }
+.ticket-list li.now-serving {
+    color: #a5d6a7; /* 明るい緑 */
+    font-weight: bold;
+    animation: blink 1.5s linear infinite;
+}
+.no-tickets-message {
+    font-size: 1.8em;
+    color: #aaa;
+    margin-top: 20px;
+    font-style: italic;
+}
+.auto-refresh-note {
+    margin-top: 25px;
+    font-size: 0.9em;
+    color: #ccc;
+}
+
+/* 点滅アニメーション */
+@keyframes blink {
+    50% { opacity: 0.5; }
 }
 
 /* --- ユーティリティクラス --- */
-.hidden {
-    display: none !important;
-}
-
-/* --- レスポンシブ対応 (共通) --- */
-@media (max-width: 1024px) {
-    .main-content-area {
-        flex-direction: column;
-    }
-    .charts-area, .sidebar-area {
-        flex: none;
-        width: 100%;
-    }
-    .sidebar-area {
-        margin-top: 30px;
-    }
-    .controls-section {
-        flex-direction: column;
-        align-items: flex-start;
-    }
-    .control-group {
-        width: 100%;
-        margin-bottom: 10px;
-    }
-    .control-group input[type="date"],
-    .control-group select {
-        width: auto;
-        flex-grow: 1;
-    }
-    #custom-range-picker { /* custom-range-inputs から IDセレクタへ */
-        flex-direction: column;
-        align-items: flex-start;
-    }
-    .end-date-label {
-        margin-left: 0;
-        margin-top: 10px;
-    }
-    .pos-container {
-        flex-direction: column;
-        max-width: 95%;
-    }
-    .products-area, .cart-area {
-        border-right: none;
-        border-bottom: 1px solid #eee;
-    }
-    .dual-display-container { /* queue-display */
-        flex-direction: column;
-        align-items: center; /* 中央寄せ */
-        gap: 15px;
-    }
-    .status-column { /* queue-display */
-        max-width: 90%; /* 幅を広げる */
-    }
-}
-
-@media (max-width: 768px) {
-    body {
-        padding-top: 120px; /* モバイルのナビゲーションバナーが縦長になることを考慮 (大きめに設定) */
-    }
-    .top-navigation-banner { height: auto; }
-    .top-navigation-banner nav ul { display: flex; flex-direction: column; align-items: center; gap: 5px;}
-    .top-navigation-banner nav li { margin: 5px 0; width: 90%; }
-    .top-navigation-banner nav a { display: block; width: 100%; box-sizing: border-box; padding: 10px; }
-
-    .dashboard-header {
-        flex-direction: column;
-        align-items: flex-start;
-    }
-    .dashboard-header h1 {
-        margin-bottom: 10px;
-        font-size: 1.7em;
-    }
-    .dashboard-container, .pos-container, .queue-info, .kitchen-container {
-        padding: 15px;
-        max-width: 100%;
-        margin-left: 5px;
-        margin-right: 5px;
-        box-sizing: border-box;
-    }
-    body.queue-info-body {
-        padding-top: 120px; /* 同上 */
-    }
-    .queue-info { padding: 20px; }
-    .queue-info h1 { font-size: 1.8em; }
-    #serving-number { font-size: 5em; }
-    #waiting-count, #last-issued-number { font-size: 1.3em; }
-
-    #product-list { grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); }
-
-    #kitchen-order-list { grid-template-columns: 1fr; }
-}
+.hidden { display: none !important; }

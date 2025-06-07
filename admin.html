@@ -57,25 +57,25 @@
             <div class="control-group">
                 <button id="refresh-data-button" class="refresh-btn">データ表示/更新</button>
             </div>
-        </div>
-
-        	<div class="display-mode-selector"> <!-- このセクションは「整理番号画面へのリンク」に変更 -->
-        		<h3>整理番号画面へのリンク</h3>
-        		<p><a href="queue-display-normal.html" target="_blank" class="refresh-btn">通常表示画面を開く</a></p>
-        	<p><a href="queue-display-dual.html" target="_blank" class="refresh-btn dual-btn">2段階表示画面を開く</a></p>
-        		<!-- select と 保存ボタンは削除 -->
+            
+            <div class="display-mode-selector"> <!-- このセクションは「整理番号画面へのリンク」に変更 -->
+    		    <h3>整理番号画面へのリンク</h3>
+    		    <p><a href="queue-display-normal.html" target="_blank"  class="refresh-btn button">通常表示画面を開く</a></p>
+        	    <p><a href="queue-display-dual.html" target="_blank" class="refresh-btn button">2段階表示画面を開く</a></p>
+        	    	<!-- select と 保存ボタンは削除 -->
+            </div>
         </div>
 
         <div class="main-content-area">
             <div class="charts-area">
                 <section class="chart-section">
-                    <h2>商品別 売上・返品状況 (金額ベース)</h2>
+                    <h2>商品別 売上金額</h2>
                     <div class="chart-container">
                         <canvas id="salesByProductChart"></canvas>
                     </div>
                 </section>
                 <section class="chart-section">
-                    <h2>時間帯別 売上・返品 推移 (選択期間の3時間ごと)</h2>
+                    <h2>時間帯別 売上 推移 (3時間毎)</h2>
                     <div class="chart-container">
                         <canvas id="salesOverTimeChart"></canvas>
                     </div>
@@ -83,7 +83,7 @@
             </div>
             <aside class="sidebar-area">
                 <section class="queue-status-section">
-                    <h2>現在の待ち状況 (参考)</h2>
+                    <h2>現在の待ち状況</h2>
                     <p>現在対応中: <span id="admin-serving-ticket">N/A</span></p>
                     <p>最新の発行番号: <span id="admin-last-issued-ticket">N/A</span></p>
                     <p>現在の待ち人数: <span id="admin-waiting-count">N/A</span> 人</p>

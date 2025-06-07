@@ -3,117 +3,139 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>文化祭POSレジ</title>
+    <title>文化祭POSレジ - 現代風UI</title>
     <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
-    <header class="top-navigation-banner">
-        <nav>
-            <ul>
-                <li><a href="pos.html" id="nav-pos">POS画面</a></li>
-                <li><a href="kitchen-display.html" id="nav-kitchen">厨房画面</a></li>
-                <li><a href="admin.html" id="nav-admin">管理者画面</a></li>
-            </ul>
-        </nav>
-    </header>
-
-    <div class="pos-container">
-        <div class="products-area">
-            <h2>商品選択</h2>
-            <div id="product-list">
-                <!-- 商品ボタン -->
+    <!-- ログインモーダル -->
+    <div id="login-modal" class="login-overlay">
+        <div class="login-modal-content">
+            <div class="login-icon">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"></path></svg>
             </div>
-        </div>
-
-        <div class="cart-area">
-            <h2>カート</h2>
-            <ul id="cart-items">
-                <!-- カート内商品 -->
-            </ul>
-            <div class="cart-summary">
-                <p>合計金額: <span id="total-amount">0</span> 円</p>
-                <button id="checkout-button">会計する</button>
-                <button id="clear-cart-button">クリア</button>
+            <h2 class="login-title">ログイン</h2>
+            <div class="login-input-group">
+                <label>従業員番号</label>
+                <input type="password" id="employee-id-input" placeholder="スキャンまたはタッチで入力">
             </div>
-
-                <!-- ★★★ 会計確認モーダル ★★★ -->
-        <div id="payment-confirm-modal" class="modal hidden">
-            <div class="modal-content payment-modal-content"> <!-- 新しいクラスを追加 -->
-                <span class="close-modal-button" id="close-payment-modal-button">✕</span>
-                <h4>会計確認</h4>
-                <p>合計金額: <span id="modal-total-amount">0</span> 円</p>
-                <div class="modal-payment-input">
-                    <label for="modal-amount-received">お預かり金額:</label>
-                    <input type="number" id="modal-amount-received" placeholder="0" readonly> <!-- readonlyにして数字ボタンで操作 -->
-                    <span>円</span>
-                </div>
-                <div id="keypad-container">
-                    <!-- 数字ボタンがここにJSで生成される -->
-                </div>
-                <p id="modal-change-display">お釣り: <span id="modal-change-amount">0</span> 円</p>
-                <button id="confirm-payment-button">支払いを確定する</button>
-                <button id="cancel-payment-button" class="modal-option-back">キャンセル</button>
-            </div>
-        </div>
-
-            <div class="queue-management">
-                <h3>呼び出し状況</h3>
-                <p>現在対応中: <span id="serving-ticket-admin">N/A</span></p>
-                <button id="next-customer-button">次の番号へ</button>
-            </div>
-
-            <div class="ticket-management-area">
-                <h3>整理券 操作</h3>
-                <div class="current-ticket-info">
-                    <p>最新発行番号: <span id="pos-latest-ticket">N/A</span></p>
-                    <label for="ticket-number-input">操作対象番号:</label>
-                    <input type="number" id="ticket-number-input" placeholder="番号入力">
-                    <button id="open-ticket-options-button">番号操作</button>
-                </div>
-            </div>
-
-            <div class="transaction-management">
-                <h3>取引管理 (返品/会計直後の取消)</h3>
-                <div>
-                    <label for="search-ticket-number">整理番号で検索(返品用):</label>
-                    <input type="number" id="search-ticket-number" placeholder="番号入力">
-                    <button id="search-transaction-button">検索</button>
-                </div>
-                <div id="transaction-details" class="hidden">
-                    <h4>取引詳細</h4>
-                    <p>整理番号: <span id="detail-ticket-number"></span></p>
-                    <p>購入日時: <span id="detail-timestamp"></span></p>
-                    <p>合計金額: <span id="detail-total-amount"></span> 円</p>
-                    <ul id="detail-items"></ul>
-                    <p>状態: <span id="detail-status"></span></p>
-                    <button id="refund-transaction-button" class="hidden">この取引を返品する</button>
-                </div>
-                <button id="cancel-latest-transaction-button">最新の会計を取消</button>
-            </div>
+            <button id="login-submit-button" class="login-submit-btn">ログイン</button>
         </div>
     </div>
 
+    <!-- メインPOSコンテナ -->
+    <div class="modern-pos-container">
+        <!-- 左側：カート表示エリア -->
+        <div class="cart-display-area">
+            <div class="pos-header">
+                <span class="header-title">ローソン教育</span>
+                <span id="current-time" class="header-time"></span>
+                <div class="header-status">
+                    <span>ILS [レジNo.1]</span>
+                    <span class="help-icon">?</span>
+                </div>
+            </div>
+            <div class="pos-main-alert">商品を登録してください。よろしければ、会計してください。</div>
+            <div class="cart-content-wrapper">
+                <div class="cart-table-container">
+                    <table id="cart-table"><tbody id="cart-items-tbody"></tbody></table>
+                </div>
+            </div>
+            <div class="cart-total-area">
+                <div class="total-box">
+                    <div class="total-label">合　計</div>
+                    <div class="total-amount-display">¥ <span id="total-amount">0</span></div>
+                </div>
+            </div>
+            <div class="pos-checkout-area">
+                <button id="checkout-other-btn" class="checkout-btn other disabled">現金以外</button>
+                <button id="checkout-cash-btn" class="checkout-btn cash">会計</button>
+            </div>
+        </div>
+        <!-- 右側：機能パネルエリア -->
+        <div class="function-panel-area">
+            <div class="pos-tabs">
+                <button class="tab-button active" data-tab="tab-products">1.商品</button>
+                <button class="tab-button" data-tab="tab-services">2.サービス</button>
+                <button class="tab-button" data-tab="tab-operations">3.業務</button>
+            </div>
+            <div class="tab-content-container">
+                <div id="tab-products" class="tab-content active"><div id="product-list" class="item-grid"></div></div>
+                <div id="tab-services" class="tab-content"><div id="service-list" class="item-grid"></div></div>
+                <div id="tab-operations" class="tab-content"><div id="operation-list" class="item-grid"></div></div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- フッターアイコンバー -->
+    <footer class="pos-footer">
+        <button class="footer-btn"><svg class="footer-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M20 15.5c-1.25 0-2.45-.2-3.57-.57-.35-.11-.74-.03-1.02.24l-2.2 2.2c-2.83-1.44-5.15-3.75-6.59-6.59l2.2-2.2c.28-.28.36-.67.25-1.02C8.7 6.45 8.5 5.25 8.5 4c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1 0 9.39 7.61 17 17 17 .55 0 1-.45 1-1v-3.5c0-.55-.45-1-1-1z"></path></svg><span>呼び出し</span></button>
+        <button class="footer-btn" id="footer-cancel-btn"><svg class="footer-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"></path></svg><span>中止</span></button>
+        <button class="footer-btn"><svg class="footer-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"></path></svg><span>保留</span></button>
+        <button class="footer-btn"><svg class="footer-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M20 4H4c-1.11 0-1.99.89-1.99 2L2 18c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V6c0-1.11-.89-2-2-2zm0 14H4v-6h16v6zm0-10H4V6h16v2z"></path></svg><span>手入力入金</span></button>
+        <button class="footer-btn"><div class="alert-badge-wrapper"><svg class="footer-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"></path></svg><span class="alert-badge">6</span></div><span>アラートリスト</span></button>
+        <button class="footer-btn" id="footer-logout-btn"><svg class="footer-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z"></path></svg><span>ログアウト</span></button>
+    </footer>
+
+    <!-- ★★★★★ 会計確認モーダル (完全版) ★★★★★ -->
+    <div id="payment-confirm-modal" class="modal hidden">
+        <div class="modal-content">
+            <span class="close-modal-button" id="close-payment-modal-button">✕</span>
+            <h4>会計確認</h4>
+            <p>合計金額: <span id="modal-total-amount">0</span> 円</p>
+            <div class="modal-payment-input">
+                <label for="modal-amount-received">お預かり金額:</label>
+                <input type="number" id="modal-amount-received" placeholder="0" readonly>
+                <span>円</span>
+            </div>
+            <!-- ここにキーパッドが生成される -->
+            <div id="keypad-container" class="keypad"></div>
+            <p id="modal-change-display">お釣り: <span id="modal-change-amount">0</span> 円</p>
+            <button id="confirm-payment-button" class="confirm-btn">支払いを確定する</button>
+            <button id="cancel-payment-button" class="cancel-btn">キャンセル</button>
+        </div>
+    </div>
+    
+    <!-- 整理券操作モーダル (省略せず配置) -->
     <div id="ticket-options-modal" class="modal hidden">
         <div class="modal-content">
             <span class="close-modal-button">×</span>
             <h4>整理番号 <span id="modal-ticket-number-display"></span> の操作</h4>
             <button id="modal-option-cancel-order">注文取消</button>
             <button id="modal-option-mark-served">受取済</button>
-            <button id="modal-option-back">戻る</button>
+            <button class="cancel-btn">戻る</button>
         </div>
     </div>
 
+    <!-- スクリプト読み込み -->
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>  <!-- ★★★ これが重要 ★★★ -->
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
     <script src="js/firebase-config.js"></script>
     <script src="js/pos-script.js"></script>
     <script>
+        // タブ切り替えと時刻表示のJS（変更なし）
         document.addEventListener('DOMContentLoaded', function() {
-            const currentPage = window.location.pathname.split("/").pop();
-            if (currentPage === "pos.html" || currentPage === "") {
-                document.getElementById('nav-pos')?.classList.add('active');
+            const tabButtons = document.querySelectorAll('.tab-button');
+            const tabContents = document.querySelectorAll('.tab-content');
+            tabButtons.forEach(button => {
+                button.addEventListener('click', () => {
+                    tabButtons.forEach(btn => btn.classList.remove('active'));
+                    tabContents.forEach(content => content.classList.remove('active'));
+                    button.classList.add('active');
+                    document.getElementById(button.dataset.tab).classList.add('active');
+                });
+            });
+            const timeSpan = document.getElementById('current-time');
+            function updateTime() {
+                const now = new Date();
+                const year = now.getFullYear();
+                const month = String(now.getMonth() + 1).padStart(2, '0');
+                const date = String(now.getDate()).padStart(2, '0');
+                const hours = String(now.getHours()).padStart(2, '0');
+                const minutes = String(now.getMinutes()).padStart(2, '0');
+                if(timeSpan) timeSpan.textContent = `${year}/${month}/${date} ${hours}:${minutes}`;
             }
+            updateTime();
+            setInterval(updateTime, 1000 * 30);
         });
     </script>
 </body>
