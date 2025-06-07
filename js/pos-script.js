@@ -1,8 +1,6 @@
-// js/pos-script.js
+// js/pos-script.js (完全版)
 
 document.addEventListener('DOMContentLoaded', () => {
-    console.log("pos-script.js: DOMContentLoaded triggered.");
-
     // --- 1. 要素の取得 ---
     const loginModal = document.getElementById('login-modal');
     const loginSubmitButton = document.getElementById('login-submit-button');
@@ -14,24 +12,119 @@ document.addEventListener('DOMContentLoaded', () => {
     const operationListDiv = document.getElementById('operation-list');
     const logoutButton = document.getElementById('footer-logout-btn');
     const cancelCartFooterBtn = document.getElementById('footer-cancel-btn');
+    const posMainAlert = document.getElementById('pos-main-alert');
+    const discountDisplayArea = document.getElementById('discount-display-area');
+    const discountAmountDisplay = document.getElementById('discount-amount-display');
+    const cancelDiscountBtn = document.getElementById('cancel-discount-btn');
+    // モーダル関連
+    const salesStatsModal = document.getElementById('sales-stats-modal');
+    const discountModal = document.getElementById('discount-modal');
+    const donationModal = document.getElementById('donation-modal');
+    const cashCheckModal = document.getElementById('cash-check-modal');
+    const alertListModal = document.getElementById('alert-list-modal');
+    const alertListUl = document.getElementById('alert-list-ul');
     const paymentConfirmModal = document.getElementById('payment-confirm-modal');
     const modalTotalAmountSpan = document.getElementById('modal-total-amount');
     const modalAmountReceivedInput = document.getElementById('modal-amount-received');
     const keypadContainer = document.getElementById('keypad-container');
     const modalChangeDisplayP = document.getElementById('modal-change-display');
     const confirmPaymentButton = document.getElementById('confirm-payment-button');
-    const closePaymentModalButton = document.getElementById('close-payment-modal-button');
     const cancelPaymentButton = document.getElementById('cancel-payment-button');
 
     // --- 2. グローバル変数 ---
     let cart = []; 
     let products = [];
+    let currentDiscount = { type: null, amount: 0 };
+    let alerts = {};
     const db = firebase.firestore();
     const queueStatusRef = db.collection('queue').doc('currentStatus');
+    let salesChartInstance = null;
 
-    // --- 3. 関数の定義 ---
-    
-    // Firestoreから商品データを取得
+    // --- 3. 初期化処理 ---
+    function initialize() {
+        document.querySelectorAll('.modal .close-modal-button').forEach(btn => {
+            btn.addEventListener('click', () => btn.closest('.modal').classList.add('hidden'));
+        });
+        setupLoginSystem();
+        setupEventListeners();
+        setupServiceButtons();
+        setupOperationButtons();
+        fetchProducts();
+        initializeCashManagement();
+    }
+
+    function setupEventListeners() {
+        checkoutCashBtn?.addEventListener('click', openPaymentModal);
+        cancelCartFooterBtn?.addEventListener('click', () => {
+            if (cart.length > 0 || currentDiscount.amount > 0) {
+                if (confirm('カートの内容をすべて取り消しますか？')) clearCart();
+            }
+        });
+        cancelDiscountBtn?.addEventListener('click', clearDiscount);
+        document.getElementById('footer-alert-btn')?.addEventListener('click', openAlertListModal);
+        document.getElementById('apply-discount-btn')?.addEventListener('click', applyDiscount);
+        document.getElementById('confirm-donation-btn')?.addEventListener('click', confirmDonation);
+        confirmPaymentButton?.addEventListener('click', confirmPayment);
+        cancelPaymentButton?.addEventListener('click', () => paymentConfirmModal.classList.add('hidden'));
+    }
+
+    // --- 4. ログインとアラートの機能 ---
+    function setupLoginSystem() {
+        if (!loginModal || !loginSubmitButton) return;
+        loginModal.classList.remove('hidden');
+        loginSubmitButton.addEventListener('click', () => loginModal.classList.add('hidden'));
+        logoutButton?.addEventListener('click', () => {
+            if (confirm('ログアウトしますか？')) {
+                clearCart();
+                loginModal.classList.remove('hidden');
+            }
+        });
+    }
+
+    function initializeCashManagement() {
+        // 1時間ごとにレジ点検アラートを追加
+        setInterval(() => addAlert('cash_check', 'レジ点検を行ってください'), 1000 * 60 * 60);
+
+        // Firestoreから釣銭設定を監視
+        db.collection('setting').doc('cashConfig').onSnapshot(doc => {
+            if (!doc.exists) return;
+            // checkCashLevels(doc.data()); // 将来の釣銭枚数チェックロジック用
+        });
+    }
+
+    function addAlert(id, message) {
+        alerts[id] = message;
+        updateAlertsView();
+    }
+    function removeAlert(id) {
+        delete alerts[id];
+        updateAlertsView();
+    }
+    function updateAlertsView() {
+        const alertCount = Object.keys(alerts).length;
+        alertListUl.innerHTML = alertCount > 0 ? Object.values(alerts).map(msg => `<li>${msg}</li>`).join('') : '<li>現在、アラートはありません。</li>';
+        const alertBadge = document.querySelector('#footer-alert-btn .alert-badge');
+        
+        if (alertCount > 0) {
+            posMainAlert.textContent = '業務アラートが発生しています。確認してください。';
+            posMainAlert.classList.add('active-alert');
+            if(alertBadge) {
+                alertBadge.textContent = alertCount;
+                alertBadge.classList.remove('hidden');
+            }
+        } else {
+            posMainAlert.textContent = '商品を登録してください。よろしければ、会計してください。';
+            posMainAlert.classList.remove('active-alert');
+            if(alertBadge) {
+                alertBadge.classList.add('hidden');
+            }
+        }
+    }
+    function openAlertListModal() {
+        alertListModal.classList.remove('hidden');
+    }
+
+    // --- 5. カートと会計の機能 ---
     async function fetchProducts() {
         try {
             const snapshot = await db.collection('products').orderBy('order', 'asc').get();
@@ -39,19 +132,13 @@ document.addEventListener('DOMContentLoaded', () => {
             renderProducts();
         } catch (error) {
             console.error("商品データの読み込みエラー: ", error);
-            if (productListDiv) productListDiv.innerHTML = '<p style="color: red;">商品読込失敗</p>';
         }
     }
 
-    // 商品ボタンを描画
     function renderProducts() {
         if (!productListDiv) return;
-        productListDiv.innerHTML = ''; 
-        if (products.length === 0) {
-            productListDiv.innerHTML = '<p>商品なし</p>';
-            return;
-        }
-        products.forEach((product, index) => {
+        productListDiv.innerHTML = '';
+        products.forEach(product => {
             const button = document.createElement('button');
             button.textContent = product.name;
             button.addEventListener('click', () => addToCart(product));
@@ -59,74 +146,117 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // カートに商品を追加
     function addToCart(product) {
         const existingItem = cart.find(item => item.id === product.id);
-        if (existingItem) {
-            existingItem.quantity++;
-        } else {
-            cart.push({ ...product, quantity: 1 });
-        }
+        if (existingItem) existingItem.quantity++;
+        else cart.push({ ...product, quantity: 1 });
         renderCart();
     }
-    
-    // カートから商品を削除
+
     function removeFromCart(productId) {
         const itemIndex = cart.findIndex(item => item.id === productId);
         if (itemIndex > -1) {
-            if (cart[itemIndex].quantity > 1) {
-                cart[itemIndex].quantity--;
-            } else {
-                cart.splice(itemIndex, 1);
-            }
+            if (cart[itemIndex].quantity > 1) cart[itemIndex].quantity--;
+            else cart.splice(itemIndex, 1);
         }
         renderCart();
     }
 
-    // カートを描画
     function renderCart() {
         if (!cartItemsTbody || !totalAmountSpan) return;
         cartItemsTbody.innerHTML = '';
-        let total = 0;
-
+        let subTotal = 0;
+        
         if (cart.length > 0) {
             const headerRow = cartItemsTbody.insertRow();
             headerRow.className = 'table-header';
             headerRow.innerHTML = `<td>取消</td><td>商品名</td><td style="text-align: right;">単価</td><td style="text-align: right;">数量</td><td style="text-align: right;">金額</td>`;
         }
-
+        
         cart.forEach(item => {
             const row = cartItemsTbody.insertRow();
-            const subtotal = item.price * item.quantity;
-            total += subtotal;
+            const itemSubTotal = item.price * item.quantity;
+            subTotal += itemSubTotal;
             const removeButtonHTML = `<button class="remove-item-btn" data-item-id="${item.id}">-</button>`;
-            row.innerHTML = `<td>${removeButtonHTML}</td><td>${item.name}</td><td style="text-align: right;">${item.price}</td><td style="text-align: right;">${item.quantity}</td><td style="text-align: right;">${subtotal}</td>`;
+            row.innerHTML = `<td>${removeButtonHTML}</td><td>${item.name}</td><td style="text-align: right;">${item.price}</td><td style="text-align: right;">${item.quantity}</td><td style="text-align: right;">${itemSubTotal}</td>`;
         });
+
+        cartItemsTbody.querySelectorAll('.remove-item-btn').forEach(btn => btn.addEventListener('click', e => removeFromCart(e.target.dataset.itemId)));
         
-        cartItemsTbody.querySelectorAll('.remove-item-btn').forEach(button => {
-            button.addEventListener('click', (e) => removeFromCart(e.target.dataset.itemId));
-        });
-        totalAmountSpan.textContent = total;
+        const total = subTotal - currentDiscount.amount;
+        totalAmountSpan.textContent = total > 0 ? total : 0;
     }
 
-    // 会計モーダルを開く
+    function clearCart() {
+        cart = [];
+        clearDiscount();
+        renderCart();
+    }
+
     function openPaymentModal() {
-        if (cart.length === 0) { alert("カートが空です。"); return; }
-        if (!paymentConfirmModal) { console.error("会計モーダル関連の要素が見つかりません。"); return; }
+        if (cart.length === 0 && currentDiscount.amount === 0) {
+            alert("カートが空です。");
+            return;
+        }
         const total = parseFloat(totalAmountSpan.textContent) || 0;
         modalTotalAmountSpan.textContent = total;
-        modalAmountReceivedInput.value = total; // ★お預かり金額の初期値を合計金額にする
+        modalAmountReceivedInput.value = total;
         generateKeypad();
         calculateModalChange();
         paymentConfirmModal.classList.remove('hidden');
     }
 
-    // 会計モーダルを閉じる
-    function closePaymentModal() {
-        if (paymentConfirmModal) paymentConfirmModal.classList.add('hidden');
+    async function confirmPayment() {
+        const totalAmount = parseFloat(totalAmountSpan.textContent) || 0;
+        const amountReceived = parseFloat(modalAmountReceivedInput.value) || 0;
+        if (amountReceived < totalAmount) {
+            alert("お預かり金額が不足しています。");
+            return;
+        }
+        
+        const changeGiven = amountReceived - totalAmount;
+        
+        try {
+            const newTicketNumber = await db.runTransaction(async (transaction) => {
+                const queueDoc = await transaction.get(queueStatusRef);
+                const lastIssuedTicket = queueDoc.exists ? (queueDoc.data().lastIssuedTicket || 0) : 0;
+                const newTicket = lastIssuedTicket + 1;
+                const updateData = {
+                    lastIssuedTicket: newTicket,
+                    makingTickets: firebase.firestore.FieldValue.arrayUnion(newTicket),
+                    waitingCount: firebase.firestore.FieldValue.increment(1)
+                };
+                if (!queueDoc.exists) {
+                    transaction.set(queueStatusRef, { ...updateData, readyTickets: [], servingTicket: 0 });
+                } else {
+                    transaction.update(queueStatusRef, updateData);
+                }
+                return newTicket;
+            });
+
+            await db.collection('sales').add({
+                timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+                items: cart, totalAmount, amountReceived, changeGiven,
+                ticketNumber: newTicketNumber, status: "completed", discount: currentDiscount
+            });
+
+            const kitchenOrderItems = cart.map(item => ({ name: item.name, quantity: item.quantity }));
+            if (kitchenOrderItems.length > 0) {
+                await db.collection('kitchenQueue').doc(String(newTicketNumber)).set({
+                    ticketNumber: newTicketNumber, items: kitchenOrderItems,
+                    orderTimestamp: firebase.firestore.FieldValue.serverTimestamp(), status: "pending"
+                });
+            }
+
+            alert(`会計完了。\n整理番号: ${newTicketNumber}\n合計: ${totalAmount}円`);
+            clearCart();
+            paymentConfirmModal.classList.add('hidden');
+        } catch (error) {
+            console.error("会計処理エラー: ", error);
+            alert("会計処理中にエラーが発生しました。");
+        }
     }
 
-    // キーパッドを生成
     function generateKeypad() {
         if (!keypadContainer) return;
         keypadContainer.innerHTML = '';
@@ -134,14 +264,21 @@ document.addEventListener('DOMContentLoaded', () => {
         keys.forEach(key => {
             const button = document.createElement('button');
             button.textContent = key;
-            if (key === 'C') button.addEventListener('click', () => { modalAmountReceivedInput.value = '0'; calculateModalChange(); });
-            else if (key === 'BS') button.addEventListener('click', () => { modalAmountReceivedInput.value = modalAmountReceivedInput.value.slice(0, -1) || '0'; calculateModalChange(); });
-            else button.addEventListener('click', () => { if (modalAmountReceivedInput.value === '0') modalAmountReceivedInput.value = key; else modalAmountReceivedInput.value += key; calculateModalChange(); });
+            button.addEventListener('click', () => {
+                const currentVal = modalAmountReceivedInput.value;
+                if (key === 'C') {
+                    modalAmountReceivedInput.value = '0';
+                } else if (key === 'BS') {
+                    modalAmountReceivedInput.value = currentVal.length > 1 ? currentVal.slice(0, -1) : '0';
+                } else {
+                    modalAmountReceivedInput.value = currentVal === '0' ? key : currentVal + key;
+                }
+                calculateModalChange();
+            });
             keypadContainer.appendChild(button);
         });
     }
 
-    // お釣りを計算
     function calculateModalChange() {
         const total = parseFloat(modalTotalAmountSpan.textContent) || 0;
         const received = parseFloat(modalAmountReceivedInput.value) || 0;
@@ -155,19 +292,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // ログイン・ログアウト処理
-    function setupLoginSystem() {
-        loginModal?.classList.remove('hidden');
-        loginSubmitButton?.addEventListener('click', () => loginModal.classList.add('hidden'));
-        logoutButton?.addEventListener('click', () => {
-            if (confirm('ログアウトしますか？')) {
-                cart = []; renderCart();
-                loginModal.classList.remove('hidden');
-            }
-        });
-    }
-
-    // サービスボタンを生成
+    // --- 6. 業務タブの機能 ---
     function setupServiceButtons() {
         if (!serviceListDiv) return;
         serviceListDiv.innerHTML = '';
@@ -183,111 +308,187 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // 業務ボタンを生成
     function setupOperationButtons() {
         if (!operationListDiv) return;
         operationListDiv.innerHTML = '';
-        const items = ['レジ点検', '販売数確認', '値引き', '売上外入金'];
-        items.forEach(name => {
+        [
+            { name: '厨房画面', action: () => window.open('kitchen-display.html', '_blank') },
+            { name: '呼出画面', action: () => window.open('queue-display-dual.html', '_blank') },
+            { name: '販売数確認', action: openSalesStatsModal },
+            { name: '値引き', action: () => discountModal.classList.remove('hidden') },
+            { name: '売上外入金', action: () => donationModal.classList.remove('hidden') },
+            { name: 'レジ点検', action: openCashCheckModal }
+        ].forEach(item => {
             const button = document.createElement('button');
-            button.textContent = name;
-            button.addEventListener('click', () => alert(`「${name}」は未実装です。`));
+            button.textContent = item.name;
+            button.addEventListener('click', item.action);
             operationListDiv.appendChild(button);
         });
     }
 
+    async function openSalesStatsModal() {
+        salesStatsModal.classList.remove('hidden');
+        const listEl = document.getElementById('sales-by-item-list');
+        listEl.innerHTML = '<p>データを集計中...</p>';
+        try {
+            const salesSnapshot = await db.collection('sales').get();
+            const sales = salesSnapshot.docs.map(doc => doc.data());
+            
+            const itemCounts = {};
+            sales.forEach(sale => {
+                if (sale.items && Array.isArray(sale.items)) {
+                    sale.items.forEach(item => {
+                        itemCounts[item.name] = (itemCounts[item.name] || 0) + item.quantity;
+                    });
+                }
+            });
+            listEl.innerHTML = '<h5>商品別販売数</h5><ul>' + 
+                Object.entries(itemCounts).map(([name, count]) => `<li><span>${name}</span><span>${count}個</span></li>`).join('') + '</ul>';
 
-    // --- 4. イベントリスナーの設定 ---
-    checkoutCashBtn?.addEventListener('click', openPaymentModal);
-    cancelCartFooterBtn?.addEventListener('click', () => {
-        if (cart.length > 0 && confirm('カートを空にしますか？')) {
-            cart = []; renderCart();
+            const hourlySales = Array(8).fill(0);
+            sales.forEach(sale => {
+                if (sale.timestamp && sale.timestamp.toDate) {
+                    const hour = sale.timestamp.toDate().getHours();
+                    hourlySales[Math.floor(hour / 3)] += sale.totalAmount;
+                }
+            });
+
+            if (salesChartInstance) salesChartInstance.destroy();
+            const ctx = document.getElementById('sales-chart').getContext('2d');
+            salesChartInstance = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['0-3', '3-6', '6-9', '9-12', '12-15', '15-18', '18-21', '21-24'],
+                    datasets: [{ label: '3時間ごとの売上 (円)', data: hourlySales, backgroundColor: 'rgba(0, 160, 233, 0.6)' }]
+                },
+                options: { responsive: true, maintainAspectRatio: false }
+            });
+        } catch (error) {
+            console.error("販売数データ取得エラー:", error);
+            listEl.innerHTML = '<p style="color:red;">データ取得に失敗しました。</p>';
         }
-    });
-    closePaymentModalButton?.addEventListener('click', closePaymentModal);
-    cancelPaymentButton?.addEventListener('click', closePaymentModal);
+    }
 
-    // ★★★★★ 支払い確定ボタンの処理 (Firestore連携部分を完全実装) ★★★★★
-    confirmPaymentButton?.addEventListener('click', async () => {
-        const totalAmount = parseFloat(modalTotalAmountSpan.textContent) || 0;
-        const amountReceived = parseFloat(modalAmountReceivedInput.value) || 0;
-        if (amountReceived < totalAmount) {
-            alert("お預かり金額が不足しています。");
+    function applyDiscount() {
+        const amountInput = document.getElementById('discount-amount-input');
+        const amount = parseInt(amountInput.value);
+        if (isNaN(amount) || amount <= 0) { alert('正しい金額を入力してください。'); return; }
+        currentDiscount = { type: 'manual', amount };
+        discountAmountDisplay.textContent = `- ¥${amount}`;
+        discountDisplayArea.classList.remove('hidden');
+        discountModal.classList.add('hidden');
+        amountInput.value = '';
+        renderCart();
+    }
+
+    function clearDiscount() {
+        currentDiscount = { type: null, amount: 0 };
+        discountDisplayArea.classList.add('hidden');
+        renderCart();
+    }
+    
+    async function confirmDonation() {
+        const nameInput = document.getElementById('donator-name-input');
+        const amountInput = document.getElementById('donation-amount-input');
+        const name = nameInput.value;
+        const amount = parseInt(amountInput.value);
+        if (name.trim() === '' || isNaN(amount) || amount <= 0) { alert('全ての項目を正しく入力してください。'); return; }
+        
+        try {
+            await db.collection('donations').add({ name, amount, timestamp: firebase.firestore.FieldValue.serverTimestamp() });
+            alert(`${name}様より、${amount}円の寄付を登録しました。`);
+            donationModal.classList.add('hidden');
+            nameInput.value = '';
+            amountInput.value = '';
+        } catch (error) { console.error('寄付情報の保存エラー:', error); alert('登録に失敗しました。'); }
+    }
+// ...
+async function openCashCheckModal() {
+    cashCheckModal.classList.remove('hidden');
+    const contentEl = document.getElementById('cash-check-content');
+    const theoreticalBalanceEl = document.getElementById('theoretical-balance');
+    const actualBalanceEl = document.getElementById('actual-balance');
+    const differenceEl = document.getElementById('balance-difference');
+
+    contentEl.innerHTML = '<p>データを読み込み中...</p>';
+    theoreticalBalanceEl.textContent = '計算中...';
+    actualBalanceEl.textContent = '0';
+    differenceEl.textContent = '0';
+    
+    try {
+        // --- 1. 必要なデータを並行して取得 ---
+        const [configDoc, salesSnapshot, donationsSnapshot] = await Promise.all([
+            db.collection('setting').doc('cashConfig').get(),
+            db.collection('sales').get(),
+            db.collection('donations').get()
+        ]);
+
+        if (!configDoc.exists) {
+            contentEl.innerHTML = '<p style="color:red;">釣銭設定が見つかりません。</p>';
             return;
         }
 
-        closePaymentModal();
-        const changeGiven = amountReceived - totalAmount;
+        // --- 2. 理論残高を計算 ---
+        const cashConfig = configDoc.data();
+        const initialAmount = cashConfig.initialAmount || 0;
+
+        const totalSales = salesSnapshot.docs.reduce((sum, doc) => sum + doc.data().totalAmount, 0);
+        const totalDonations = donationsSnapshot.docs.reduce((sum, doc) => sum + doc.data().amount, 0);
         
-        try {
-            // 1. 新しい整理番号を発行 (トランザクション処理)
-            const newTicketNumber = await db.runTransaction(async (transaction) => {
-                const queueDoc = await transaction.get(queueStatusRef);
-                const lastIssuedTicket = queueDoc.exists ? (queueDoc.data().lastIssuedTicket || 0) : 0;
-                const newTicket = lastIssuedTicket + 1;
-                
-                const updateData = {
-                    lastIssuedTicket: newTicket,
-                    makingTickets: firebase.firestore.FieldValue.arrayUnion(newTicket),
-                    waitingCount: firebase.firestore.FieldValue.increment(1)
-                };
-                
-                if (!queueDoc.exists) {
-                    transaction.set(queueStatusRef, { ...updateData, readyTickets: [], servingTicket: 0 });
-                } else {
-                    transaction.update(queueStatusRef, updateData);
-                }
-                return newTicket;
-            });
+        const theoreticalBalance = initialAmount + totalSales + totalDonations;
+        theoreticalBalanceEl.textContent = theoreticalBalance;
 
-            // 2. 売上情報を `sales` コレクションに保存
-            await db.collection('sales').add({
-                timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-                items: cart.map(item => ({ productId: item.id, name: item.name, price: item.price, quantity: item.quantity })),
-                totalAmount,
-                amountReceived,
-                changeGiven,
-                ticketNumber: newTicketNumber,
-                status: "completed"
-            });
+        // --- 3. 金種入力欄を描画 ---
+        const denominations = cashConfig.denominations;
+        contentEl.innerHTML = '';
+        Object.entries(denominations).sort((a,b) => b[0] - a[0]).forEach(([value, name]) => {
+            contentEl.innerHTML += `<div class="modal-input-group"><label>${name}:</label><input type="number" class="cash-count" data-value="${value}" placeholder="枚数"><span>枚</span></div>`;
+        });
 
-            // 3. 厨房用のキューに注文情報を保存
-            const kitchenOrderItems = cart.map(item => ({ name: item.name, quantity: item.quantity }));
-            await db.collection('kitchenQueue').doc(String(newTicketNumber)).set({
-                ticketNumber: newTicketNumber,
-                items: kitchenOrderItems,
-                orderTimestamp: firebase.firestore.FieldValue.serverTimestamp(),
-                status: "pending"
-            });
+        // --- 4. イベントリスナーを設定 ---
+        contentEl.querySelectorAll('.cash-count').forEach(input => {
+            input.addEventListener('input', () => calculateActualBalance(theoreticalBalance));
+        });
+        
+        document.getElementById('complete-cash-check-btn').onclick = () => {
+            removeAlert('cash_check');
+            cashCheckModal.classList.add('hidden');
+            alert('レジ点検を完了しました。');
+        };
 
-            alert(`会計完了。\n整理番号: ${newTicketNumber}\n合計: ${totalAmount}円\nお預かり: ${amountReceived}円\nお釣り: ${changeGiven}円`);
-            cart = []; renderCart();
+    } catch (error) {
+        console.error("レジ点検データの読み込みエラー:", error);
+        contentEl.innerHTML = '<p style="color:red;">データ読み込みに失敗しました。</p>';
+    }
+}
 
-        } catch (error) {
-            console.error("会計処理・Firestore保存エラー: ", error);
-            alert("会計処理中にエラーが発生しました。詳細はコンソールを確認してください。");
-        }
+// calculateActualBalance関数も過不足計算機能を追加して修正
+function calculateActualBalance(theoreticalBalance) {
+    let actualTotal = 0;
+    document.querySelectorAll('#cash-check-content .cash-count').forEach(input => {
+        const value = parseInt(input.dataset.value);
+        const count = parseInt(input.value) || 0;
+        actualTotal += value * count;
     });
 
-    // --- 5. 初期化処理 ---
-    async function initialize() {
-        setupLoginSystem();
-        setupServiceButtons();
-        setupOperationButtons();
-        await fetchProducts();
+    const actualBalanceEl = document.getElementById('actual-balance');
+    const differenceEl = document.getElementById('balance-difference');
+    const differenceSpan = differenceEl.parentElement;
 
-        // Firestoreのqueue/currentStatusドキュメントがなければ作成
-        const doc = await queueStatusRef.get();
-        if (!doc.exists) {
-            await queueStatusRef.set({
-                lastIssuedTicket: 0,
-                makingTickets: [],
-                readyTickets: [],
-                servingTicket: 0,
-                waitingCount: 0
-            });
-        }
-    }
+    actualBalanceEl.textContent = actualTotal;
     
+    const difference = actualTotal - theoreticalBalance;
+    differenceEl.textContent = difference;
+
+    // 過不足に応じて色を変更
+    differenceSpan.classList.remove('plus', 'minus');
+    if (difference > 0) {
+        differenceSpan.classList.add('plus');
+    } else if (difference < 0) {
+        differenceSpan.classList.add('minus');
+    }
+}
+
+    // --- 初期化処理の実行 ---
     initialize();
 });

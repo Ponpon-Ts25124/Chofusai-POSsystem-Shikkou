@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>文化祭POSレジ - 現代風UI</title>
     <link rel="stylesheet" href="css/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
     <!-- ログインモーダル -->
@@ -34,10 +35,15 @@
                     <span class="help-icon">?</span>
                 </div>
             </div>
-            <div class="pos-main-alert">商品を登録してください。よろしければ、会計してください。</div>
+            <div id="pos-main-alert" class="pos-main-alert">商品を登録してください。よろしければ、会計してください。</div>
             <div class="cart-content-wrapper">
                 <div class="cart-table-container">
                     <table id="cart-table"><tbody id="cart-items-tbody"></tbody></table>
+                </div>
+                <div id="discount-display-area" class="discount-display hidden">
+                    <span>値引:</span>
+                    <span id="discount-amount-display"></span>
+                    <button id="cancel-discount-btn">×</button>
                 </div>
             </div>
             <div class="cart-total-area">
@@ -50,7 +56,8 @@
                 <button id="checkout-other-btn" class="checkout-btn other disabled">現金以外</button>
                 <button id="checkout-cash-btn" class="checkout-btn cash">会計</button>
             </div>
-        </div>
+        </div> <!-- ★★★★★ ここが正しい閉じタグの位置 ★★★★★ -->
+
         <!-- 右側：機能パネルエリア -->
         <div class="function-panel-area">
             <div class="pos-tabs">
@@ -72,14 +79,14 @@
         <button class="footer-btn" id="footer-cancel-btn"><svg class="footer-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"></path></svg><span>中止</span></button>
         <button class="footer-btn"><svg class="footer-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"></path></svg><span>保留</span></button>
         <button class="footer-btn"><svg class="footer-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M20 4H4c-1.11 0-1.99.89-1.99 2L2 18c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V6c0-1.11-.89-2-2-2zm0 14H4v-6h16v6zm0-10H4V6h16v2z"></path></svg><span>手入力入金</span></button>
-        <button class="footer-btn"><div class="alert-badge-wrapper"><svg class="footer-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"></path></svg><span class="alert-badge">6</span></div><span>アラートリスト</span></button>
+        <button class="footer-btn" id="footer-alert-btn"><div class="alert-badge-wrapper"><svg class="footer-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"></path></svg><span class="alert-badge hidden">0</span></div><span>アラートリスト</span></button>
         <button class="footer-btn" id="footer-logout-btn"><svg class="footer-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z"></path></svg><span>ログアウト</span></button>
     </footer>
 
-    <!-- ★★★★★ 会計確認モーダル (完全版) ★★★★★ -->
+    <!-- 会計確認モーダル -->
     <div id="payment-confirm-modal" class="modal hidden">
         <div class="modal-content">
-            <span class="close-modal-button" id="close-payment-modal-button">✕</span>
+            <span class="close-modal-button">✕</span>
             <h4>会計確認</h4>
             <p>合計金額: <span id="modal-total-amount">0</span> 円</p>
             <div class="modal-payment-input">
@@ -87,32 +94,86 @@
                 <input type="number" id="modal-amount-received" placeholder="0" readonly>
                 <span>円</span>
             </div>
-            <!-- ここにキーパッドが生成される -->
             <div id="keypad-container" class="keypad"></div>
             <p id="modal-change-display">お釣り: <span id="modal-change-amount">0</span> 円</p>
-            <button id="confirm-payment-button" class="confirm-btn">支払いを確定する</button>
-            <button id="cancel-payment-button" class="cancel-btn">キャンセル</button>
+            <div class="modal-btn-area">
+                <button id="cancel-payment-button" class="cancel-btn">キャンセル</button>
+                <button id="confirm-payment-button" class="confirm-btn">支払いを確定する</button>
+            </div>
+        </div>
+    </div>
+    <!-- 販売数確認モーダル -->
+    <div id="sales-stats-modal" class="modal hidden">
+        <div class="modal-content wide">
+            <span class="close-modal-button">✕</span>
+            <h4>販売数確認</h4>
+            <div class="sales-stats-content">
+                <div class="chart-container">
+                    <canvas id="sales-chart"></canvas>
+                </div>
+                <div id="sales-by-item-list" class="sales-list"></div>
+            </div>
+        </div>
+    </div>
+    <!-- 値引きモーダル -->
+    <div id="discount-modal" class="modal hidden">
+        <div class="modal-content">
+            <span class="close-modal-button">✕</span>
+            <h4>値引き</h4>
+            <div class="modal-input-group">
+                <label for="discount-amount-input">値引き金額:</label>
+                <input type="number" id="discount-amount-input" placeholder="金額を入力">
+                <span>円</span>
+            </div>
+            <button id="apply-discount-btn" class="confirm-btn full-width">値引きを適用</button>
+        </div>
+    </div>
+    <!-- 売上外入金モーダル -->
+    <div id="donation-modal" class="modal hidden">
+        <div class="modal-content">
+            <span class="close-modal-button">✕</span>
+            <h4>売上外入金 (寄付)</h4>
+            <div class="modal-input-group">
+                <label for="donator-name-input">寄付者名:</label>
+                <input type="text" id="donator-name-input" placeholder="氏名を入力">
+            </div>
+            <div class="modal-input-group">
+                <label for="donation-amount-input">寄付金額:</label>
+                <input type="number" id="donation-amount-input" placeholder="金額を入力">
+                <span>円</span>
+            </div>
+            <button id="confirm-donation-btn" class="confirm-btn full-width">登録する</button>
+        </div>
+    </div>
+    <!-- レジ点検モーダル -->
+    <div id="cash-check-modal" class="modal hidden">
+        <div class="modal-content wide">
+            <span class="close-modal-button">✕</span>
+            <h4>レジ点検</h4>
+            <div id="cash-check-content" class="cash-check-grid"></div>
+            <div class="cash-check-summary">
+                <p>理論残高: <span id="theoretical-balance">0</span> 円</p>
+                <p>実残高: <span id="actual-balance">0</span> 円</p>
+                <p class="balance-diff">過不足: <span id="balance-difference">0</span> 円</p>
+            </div>
+            <button id="complete-cash-check-btn" class="confirm-btn full-width">点検完了</button>
+        </div>
+    </div>
+    <!-- アラートリストモーダル -->
+    <div id="alert-list-modal" class="modal hidden">
+        <div class="modal-content">
+            <span class="close-modal-button">✕</span>
+            <h4>アラートリスト</h4>
+            <ul id="alert-list-ul"></ul>
         </div>
     </div>
     
-    <!-- 整理券操作モーダル (省略せず配置) -->
-    <div id="ticket-options-modal" class="modal hidden">
-        <div class="modal-content">
-            <span class="close-modal-button">×</span>
-            <h4>整理番号 <span id="modal-ticket-number-display"></span> の操作</h4>
-            <button id="modal-option-cancel-order">注文取消</button>
-            <button id="modal-option-mark-served">受取済</button>
-            <button class="cancel-btn">戻る</button>
-        </div>
-    </div>
-
     <!-- スクリプト読み込み -->
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
     <script src="js/firebase-config.js"></script>
     <script src="js/pos-script.js"></script>
     <script>
-        // タブ切り替えと時刻表示のJS（変更なし）
         document.addEventListener('DOMContentLoaded', function() {
             const tabButtons = document.querySelectorAll('.tab-button');
             const tabContents = document.querySelectorAll('.tab-content');
