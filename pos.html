@@ -167,7 +167,25 @@
             <ul id="alert-list-ul"></ul>
         </div>
     </div>
-    
+    <!-- ★★★ キャッシュレス決済用モーダル ★★★ -->
+    <div id="cashless-payment-modal" class="modal hidden">
+        <div class="modal-content">
+            <span class="close-modal-button">✕</span>
+            <h4>キャッシュレス会計確認</h4>
+            <div class="cashless-summary">
+                <p>会計金額: <span id="cashless-modal-total-amount">0</span> 円</p>
+                <hr>
+                <p class="fee-info">決済手数料 (2.5%): <span id="cashless-modal-fee">0</span> 円</p>
+                <p class="final-amount">お受取額 (手数料引き後): <span id="cashless-modal-net-amount">0</span> 円</p>
+            </div>
+            <p class="modal-note">Squareリーダー等で<strong id="cashless-charge-amount">0 </strong>円を決済し、完了したら下のボタンを押してください。</p>
+            <div class="modal-btn-area">
+                <button id="cancel-cashless-payment-button" class="cancel-btn">キャンセル</button>
+                <button id="confirm-cashless-payment-button" class="confirm-btn">支払いを確定する</button>
+            </div>
+        </div>
+    </div>
+
     <!-- スクリプト読み込み -->
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>

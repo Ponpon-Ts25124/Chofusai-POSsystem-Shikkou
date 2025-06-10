@@ -30,6 +30,15 @@ document.addEventListener('DOMContentLoaded', () => {
     const modalChangeDisplayP = document.getElementById('modal-change-display');
     const confirmPaymentButton = document.getElementById('confirm-payment-button');
     const cancelPaymentButton = document.getElementById('cancel-payment-button');
+    // キャッシュレス決済モーダル関連
+    const cashlessPaymentModal = document.getElementById('cashless-payment-modal');
+    const checkoutOtherBtn = document.getElementById('checkout-other-btn');
+    const cashlessModalTotalAmount = document.getElementById('cashless-modal-total-amount');
+    const cashlessModalFee = document.getElementById('cashless-modal-fee');
+    const cashlessModalNetAmount = document.getElementById('cashless-modal-net-amount');
+    const cashlessChargeAmount = document.getElementById('cashless-charge-amount');
+    const confirmCashlessPaymentButton = document.getElementById('confirm-cashless-payment-button');
+    const cancelCashlessPaymentButton = document.getElementById('cancel-cashless-payment-button');
 
     // --- 2. グローバル変数 ---
     let cart = []; 
@@ -55,6 +64,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function setupEventListeners() {
         checkoutCashBtn?.addEventListener('click', openPaymentModal);
+        checkoutOtherBtn?.addEventListener('click', openCashlessPaymentModal); // ★この行を追加
         cancelCartFooterBtn?.addEventListener('click', () => {
             if (cart.length > 0 || currentDiscount.amount > 0) {
                 if (confirm('カートの内容をすべて取り消しますか？')) clearCart();
@@ -64,8 +74,32 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('footer-alert-btn')?.addEventListener('click', openAlertListModal);
         document.getElementById('apply-discount-btn')?.addEventListener('click', applyDiscount);
         document.getElementById('confirm-donation-btn')?.addEventListener('click', confirmDonation);
-        confirmPaymentButton?.addEventListener('click', confirmPayment);
+        confirmPaymentButton?.addEventListener('click', () => confirmPayment('cash')); // ★この行を追加
         cancelPaymentButton?.addEventListener('click', () => paymentConfirmModal.classList.add('hidden'));
+        confirmCashlessPaymentButton?.addEventListener('click', () => confirmPayment('cashless')); // ★この行を追加
+        cancelCashlessPaymentButton?.addEventListener('click', () => cashlessPaymentModal.classList.add('hidden')); // ★この行を追加
+    }
+
+    /**
+     * キャッシュレス決済用のモーダルを開く
+     */
+    function openCashlessPaymentModal() {
+        if (cart.length === 0 && currentDiscount.amount === 0) {
+            alert("カートが空です。");
+            return;
+        }
+
+        const total = parseFloat(totalAmountSpan.textContent) || 0;
+        const feeRate = 0.025; // Squareの決済手数料率 (仮)
+        const fee = Math.floor(total * feeRate);
+        const netAmount = total - fee;
+
+        cashlessModalTotalAmount.textContent = total;
+        cashlessChargeAmount.textContent = total; // 顧客に請求する金額
+        cashlessModalFee.textContent = fee;
+        cashlessModalNetAmount.textContent = netAmount;
+
+        cashlessPaymentModal.classList.remove('hidden');
     }
 
     // --- 4. ログインとアラートの機能 ---
@@ -206,15 +240,26 @@ document.addEventListener('DOMContentLoaded', () => {
         paymentConfirmModal.classList.remove('hidden');
     }
 
-    async function confirmPayment() {
-        const totalAmount = parseFloat(totalAmountSpan.textContent) || 0;
-        const amountReceived = parseFloat(modalAmountReceivedInput.value) || 0;
-        if (amountReceived < totalAmount) {
-            alert("お預かり金額が不足しています。");
-            return;
+    /**
+     * 会計を確定し、データをFirestoreに保存する
+     * @param {string} paymentMethod - 'cash' または 'cashless'
+     */
+    async function confirmPayment(paymentMethod) {
+        let totalAmount, amountReceived, changeGiven;
+
+        if (paymentMethod === 'cash') {
+            totalAmount = parseFloat(modalTotalAmountSpan.textContent) || 0;
+            amountReceived = parseFloat(modalAmountReceivedInput.value) || 0;
+            if (amountReceived < totalAmount) {
+                alert("お預かり金額が不足しています。");
+                return;
+            }
+            changeGiven = amountReceived - totalAmount;
+        } else { // cashless
+            totalAmount = parseFloat(cashlessModalTotalAmount.textContent) || 0;
+            amountReceived = totalAmount; // キャッシュレスではお預かり＝合計金額
+            changeGiven = 0;
         }
-        
-        const changeGiven = amountReceived - totalAmount;
         
         try {
             const newTicketNumber = await db.runTransaction(async (transaction) => {
@@ -236,21 +281,30 @@ document.addEventListener('DOMContentLoaded', () => {
 
             await db.collection('sales').add({
                 timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-                items: cart, totalAmount, amountReceived, changeGiven,
-                ticketNumber: newTicketNumber, status: "completed", discount: currentDiscount
+                items: cart,
+                totalAmount,
+                amountReceived,
+                changeGiven,
+                paymentMethod, // ★決済方法を記録
+                ticketNumber: newTicketNumber,
+                status: "completed",
+                discount: currentDiscount
             });
 
             const kitchenOrderItems = cart.map(item => ({ name: item.name, quantity: item.quantity }));
             if (kitchenOrderItems.length > 0) {
                 await db.collection('kitchenQueue').doc(String(newTicketNumber)).set({
-                    ticketNumber: newTicketNumber, items: kitchenOrderItems,
-                    orderTimestamp: firebase.firestore.FieldValue.serverTimestamp(), status: "pending"
+                    ticketNumber: newTicketNumber,
+                    items: kitchenOrderItems,
+                    orderTimestamp: firebase.firestore.FieldValue.serverTimestamp(),
+                    status: "pending"
                 });
             }
 
             alert(`会計完了。\n整理番号: ${newTicketNumber}\n合計: ${totalAmount}円`);
             clearCart();
             paymentConfirmModal.classList.add('hidden');
+            cashlessPaymentModal.classList.add('hidden'); // 両方のモーダルを閉じる
         } catch (error) {
             console.error("会計処理エラー: ", error);
             alert("会計処理中にエラーが発生しました。");
