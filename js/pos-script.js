@@ -30,6 +30,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const modalChangeDisplayP = document.getElementById('modal-change-display');
     const confirmPaymentButton = document.getElementById('confirm-payment-button');
     const cancelPaymentButton = document.getElementById('cancel-payment-button');
+    const paymentMethodModal = document.getElementById('payment-method-modal');
+    const cancelMethodSelectionBtn = document.getElementById('cancel-method-selection');
+
     // キャッシュレス決済モーダル関連
     const cashlessPaymentModal = document.getElementById('cashless-payment-modal');
     const checkoutOtherBtn = document.getElementById('checkout-other-btn');
@@ -48,6 +51,15 @@ document.addEventListener('DOMContentLoaded', () => {
     const db = firebase.firestore();
     const queueStatusRef = db.collection('queue').doc('currentStatus');
     let salesChartInstance = null;
+    const GAS_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbzL1jJIgu5pOQEH_h0rJOjuEfytYq9xW8KGUjyI612xrhq8EbwSeIdWX0dw86UiIQCe/exec'; // ★★★★★ 必ず設定 ★★★★★
+
+    // ★★★ 決済手数料率を定義 ★★★
+    // ※※※ ここの値を、実際の正しい手数料率に書き換えてください ※※※
+    const FEE_RATES = {
+        credit_card: 0.0250, // 例: 2.50%
+        e_money: 0.0325,     // 例: 3.25%
+        qr_code: 0.0325      // 例: 3.25%
+    };
 
     // --- 3. 初期化処理 ---
     function initialize() {
@@ -63,41 +75,89 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function setupEventListeners() {
-        checkoutCashBtn?.addEventListener('click', openPaymentModal);
-        checkoutOtherBtn?.addEventListener('click', openCashlessPaymentModal); // ★この行を追加
+        // 現金・現金以外の会計ボタン
+        checkoutCashBtn?.addEventListener('click', () => openPaymentModal());
+        checkoutOtherBtn?.addEventListener('click', () => paymentMethodModal.classList.remove('hidden'));
+
+        // ★★★★★ ここからが追加・修正する部分 ★★★★★
+
+        // ★★★ イベントリスナーを新しい決済ボタン用に変更 ★★★
+        // 新しい決済ボタン全てにイベントを設定
+            document.querySelectorAll('.checkout-btn.new').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const method = e.currentTarget.dataset.method;
+                    if (method === 'cash') {
+                        openPaymentModal();
+                    } else {
+                        openCashlessPaymentModal(method);
+                    }
+                });
+            });
+
+        // 決済方法選択モーダルのキャンセルボタン
+        cancelMethodSelectionBtn?.addEventListener('click', () => paymentMethodModal.classList.add('hidden'));
+
+        // ★★★★★ ここまで ★★★★★
+
+
+        // フッターの中止ボタン
         cancelCartFooterBtn?.addEventListener('click', () => {
             if (cart.length > 0 || currentDiscount.amount > 0) {
                 if (confirm('カートの内容をすべて取り消しますか？')) clearCart();
             }
         });
+
+        // 値引きのキャンセルボタン
         cancelDiscountBtn?.addEventListener('click', clearDiscount);
+
+        // 各モーダルの汎用的なイベントリスナー
         document.getElementById('footer-alert-btn')?.addEventListener('click', openAlertListModal);
         document.getElementById('apply-discount-btn')?.addEventListener('click', applyDiscount);
         document.getElementById('confirm-donation-btn')?.addEventListener('click', confirmDonation);
-        confirmPaymentButton?.addEventListener('click', () => confirmPayment('cash')); // ★この行を追加
+
+        // 会計確定ボタン
+        confirmPaymentButton?.addEventListener('click', () => confirmPayment('cash'));
+        confirmCashlessPaymentButton?.addEventListener('click', (e) => {
+            const method = e.currentTarget.dataset.method;
+            confirmPayment(method);
+        });
+
+        // 会計キャンセルボタン
         cancelPaymentButton?.addEventListener('click', () => paymentConfirmModal.classList.add('hidden'));
-        confirmCashlessPaymentButton?.addEventListener('click', () => confirmPayment('cashless')); // ★この行を追加
-        cancelCashlessPaymentButton?.addEventListener('click', () => cashlessPaymentModal.classList.add('hidden')); // ★この行を追加
+        cancelCashlessPaymentButton?.addEventListener('click', () => cashlessPaymentModal.classList.add('hidden'));
     }
 
     /**
      * キャッシュレス決済用のモーダルを開く
+     * @param {string} method - 'credit_card', 'e_money', 'qr_code'
      */
-    function openCashlessPaymentModal() {
+    function openCashlessPaymentModal(method) {
         if (cart.length === 0 && currentDiscount.amount === 0) {
             alert("カートが空です。");
             return;
         }
 
         const total = parseFloat(totalAmountSpan.textContent) || 0;
-        const feeRate = 0.025; // Squareの決済手数料率 (仮)
-        const fee = Math.floor(total * feeRate);
+        const feeRate = FEE_RATES[method] || 0; // 定義した手数料率を取得
+
+        // ★★★★★ ここからが修正箇所 ★★★★★
+
+        // 1. 手数料を計算し、小数点以下を四捨五入する
+        const fee = Math.round(total * feeRate); 
+
+        // 2. 手数料を引いた後の実質的な受取額を計算
         const netAmount = total - fee;
 
+        // 3. 各要素に値を設定
         cashlessModalTotalAmount.textContent = total;
-        cashlessChargeAmount.textContent = total; // 顧客に請求する金額
-        cashlessModalFee.textContent = fee;
-        cashlessModalNetAmount.textContent = netAmount;
+        cashlessChargeAmount.textContent = total; // 顧客に請求する金額は変わらない
+        cashlessModalFee.textContent = fee; // 四捨五入された手数料
+        cashlessModalNetAmount.textContent = netAmount; // 手数料引き後の金額
+
+        // ★★★★★ ここまで ★★★★★
+
+        // どの決済方法で確定ボタンが押されたかを記録
+        confirmCashlessPaymentButton.dataset.method = method;
 
         cashlessPaymentModal.classList.remove('hidden');
     }
@@ -227,7 +287,8 @@ document.addEventListener('DOMContentLoaded', () => {
         renderCart();
     }
 
-    function openPaymentModal() {
+
+    function openPaymentModal() { // 引数 'cash' を削除
         if (cart.length === 0 && currentDiscount.amount === 0) {
             alert("カートが空です。");
             return;
@@ -240,25 +301,24 @@ document.addEventListener('DOMContentLoaded', () => {
         paymentConfirmModal.classList.remove('hidden');
     }
 
+    // ...
     /**
      * 会計を確定し、データをFirestoreに保存する
-     * @param {string} paymentMethod - 'cash' または 'cashless'
-     */
+     * @param {string} paymentMethod - 'cash', 'credit_card', 'e_money', 'qr_code'
+     */// ★★★ 会計確定処理をスプレッドシート連携版に更新 ★★★
     async function confirmPayment(paymentMethod) {
-        let totalAmount, amountReceived, changeGiven;
+        let totalAmount, amountReceived, changeGiven, fee = 0;
 
         if (paymentMethod === 'cash') {
             totalAmount = parseFloat(modalTotalAmountSpan.textContent) || 0;
             amountReceived = parseFloat(modalAmountReceivedInput.value) || 0;
-            if (amountReceived < totalAmount) {
-                alert("お預かり金額が不足しています。");
-                return;
-            }
+            if (amountReceived < totalAmount) { alert("お預かり金額が不足しています。"); return; }
             changeGiven = amountReceived - totalAmount;
         } else { // cashless
             totalAmount = parseFloat(cashlessModalTotalAmount.textContent) || 0;
-            amountReceived = totalAmount; // キャッシュレスではお預かり＝合計金額
+            amountReceived = totalAmount;
             changeGiven = 0;
+            fee = Math.round(totalAmount * (FEE_RATES[paymentMethod] || 0));
         }
         
         try {
@@ -279,13 +339,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 return newTicket;
             });
 
+            // ★★★ Firestoreに保存するデータを修正 ★★★
             await db.collection('sales').add({
                 timestamp: firebase.firestore.FieldValue.serverTimestamp(),
                 items: cart,
                 totalAmount,
                 amountReceived,
                 changeGiven,
-                paymentMethod, // ★決済方法を記録
+                paymentMethod, // 'cash', 'credit_card', 'e_money', 'qr_code' のいずれかが入る
                 ticketNumber: newTicketNumber,
                 status: "completed",
                 discount: currentDiscount
@@ -301,10 +362,26 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
             }
 
-            alert(`会計完了。\n整理番号: ${newTicketNumber}\n合計: ${totalAmount}円`);
+            // ★★★ Googleスプレッドシートへデータを送信 ★★★
+            const logData = {
+                paymentMethod,
+                totalAmount,
+                fee,
+                discountAmount: currentDiscount.amount,
+                items: cart
+            };
+
+            await fetch(GAS_WEB_APP_URL, {
+                method: 'POST',
+                mode: 'no-cors', // CORSエラーを回避
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(logData)
+            });
+
+            alert(`会計完了。`);
             clearCart();
             paymentConfirmModal.classList.add('hidden');
-            cashlessPaymentModal.classList.add('hidden'); // 両方のモーダルを閉じる
+            cashlessPaymentModal.classList.add('hidden');
         } catch (error) {
             console.error("会計処理エラー: ", error);
             alert("会計処理中にエラーが発生しました。");

@@ -52,9 +52,23 @@
                     <div class="total-amount-display">¥ <span id="total-amount">0</span></div>
                 </div>
             </div>
-            <div class="pos-checkout-area">
-                <button id="checkout-other-btn" class="checkout-btn other disabled">現金以外</button>
-                <button id="checkout-cash-btn" class="checkout-btn cash">会計</button>
+            <!-- ★★★ 新しい決済ボタンエリア ★★★ -->
+            <div class="pos-checkout-area new-layout">
+                <button class="checkout-btn new" data-method="credit_card">
+                    <img src="img/icon_credit.png" alt="Credit Card"><span>クレジット</span>
+                </button>
+                <button class="checkout-btn new" data-method="e_money">
+                    <img src="img/icon_emoney.png" alt="E-Money"><span>電子マネー</span>
+                </button>
+                <button class="checkout-btn new" data-method="ic_card">
+                    <img src="img/icon_ic.png" alt="IC Card"><span>交通系IC</span>
+                </button>
+                <button class="checkout-btn new" data-method="qr_code">
+                    <img src="img/icon_qr.png" alt="QR Code"><span>QRコード</span>
+                </button>
+                <button class="checkout-btn new cash" data-method="cash">
+                    <img src="img/icon_cash.png" alt="Cash"><span>現金</span>
+                </button>
             </div>
         </div> <!-- ★★★★★ ここが正しい閉じタグの位置 ★★★★★ -->
 
@@ -167,18 +181,40 @@
             <ul id="alert-list-ul"></ul>
         </div>
     </div>
+    <!-- ★★★ 決済方法選択モーダル ★★★ -->
+    <div id="payment-method-modal" class="modal hidden">
+        <div class="modal-content">
+            <span class="close-modal-button">✕</span>
+            <h4>決済方法を選択</h4>
+            <div class="method-selection-grid">
+                <button class="method-btn" data-method="credit_card">
+                    <svg><!-- クレジットカードのアイコン --><path d="M20 4H4c-1.11 0-1.99.89-1.99 2L2 18c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V6c0-1.11-.89-2-2-2zm0 14H4v-6h16v6zm0-10H4V6h16v2z"></path></svg>
+                    <span>クレジットカード</span>
+                </button>
+                <button class="method-btn" data-method="e_money">
+                    <svg><!-- 電子マネーのアイコン --><path d="M21 18v1c0 1.1-.9 2-2 2H5c-1.11 0-2-.9-2-2V5c0-1.1.89-2 2-2h14c1.1 0 2 .9 2 2v1h-9c-1.11 0-2 .9-2 2v8c0 1.1.89 2 2 2h9zm-9-2h10V8H12v8zm4-2.5c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"></path></svg>
+                    <span>電子マネー</span>
+                </button>
+                <button class="method-btn" data-method="qr_code">
+                    <svg><!-- QRコードのアイコン --><path d="M3 11h8V3H3v8zm2-6h4v4H5V5zM3 21h8v-8H3v8zm2-6h4v4H5v-4zm8-12v8h8V3h-8zm6 6h-4V5h4v4zm-6 8h8v-8h-8v8zm2-6h4v4h-4v-4z"></path></svg>
+                    <span>QRコード</span>
+                </button>
+            </div>
+            <button id="cancel-method-selection" class="cancel-btn full-width">キャンセル</button>
+        </div>
+    </div>
     <!-- ★★★ キャッシュレス決済用モーダル ★★★ -->
     <div id="cashless-payment-modal" class="modal hidden">
         <div class="modal-content">
             <span class="close-modal-button">✕</span>
             <h4>キャッシュレス会計確認</h4>
             <div class="cashless-summary">
-                <p>会計金額: <span id="cashless-modal-total-amount">0</span> 円</p>
+                <p>会計金額: <span id="cashless-modal-total-amount">0.00</span> 円</p>
                 <hr>
-                <p class="fee-info">決済手数料 (2.5%): <span id="cashless-modal-fee">0</span> 円</p>
+                <p class="fee-info">決済手数料: <span id="cashless-modal-fee">0</span> 円</p>
                 <p class="final-amount">お受取額 (手数料引き後): <span id="cashless-modal-net-amount">0</span> 円</p>
             </div>
-            <p class="modal-note">Squareリーダー等で<strong id="cashless-charge-amount">0 </strong>円を決済し、完了したら下のボタンを押してください。</p>
+            <p class="modal-note">スマートフォン等で<strong id="cashless-charge-amount">0 </strong>円を決済し、完了したら下のボタンを押してください。</p>
             <div class="modal-btn-area">
                 <button id="cancel-cashless-payment-button" class="cancel-btn">キャンセル</button>
                 <button id="confirm-cashless-payment-button" class="confirm-btn">支払いを確定する</button>
