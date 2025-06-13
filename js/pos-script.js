@@ -76,25 +76,20 @@ document.addEventListener('DOMContentLoaded', () => {
         initializeCashManagement();
     }
 
-    function setupEventListeners() {
-        // 現金・現金以外の会計ボタン
-        checkoutCashBtn?.addEventListener('click', () => openPaymentModal());
-        checkoutOtherBtn?.addEventListener('click', () => paymentMethodModal.classList.remove('hidden'));
-
-        // ★★★★★ ここからが追加・修正する部分 ★★★★★
-
-        // ★★★ イベントリスナーを新しい決済ボタン用に変更 ★★★
-        // 新しい決済ボタン全てにイベントを設定
-            document.querySelectorAll('.checkout-btn.new').forEach(btn => {
-                btn.addEventListener('click', (e) => {
-                    const method = e.currentTarget.dataset.method;
-                    if (method === 'cash') {
-                        openPaymentModal();
-                    } else {
-                        openCashlessPaymentModal(method);
-                    }
-                });
-            });
+function setupEventListeners() {
+    // ★★★★★ 新しい5つの決済ボタンにイベントを設定 ★★★★★
+    document.querySelectorAll('.checkout-btn.new').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const method = e.currentTarget.dataset.method;
+            if (method === 'cash') {
+                // 現金ボタンが押されたら、現金会計モーダルを開く
+                openPaymentModal();
+            } else {
+                // それ以外のボタン（クレジット等）が押されたら、キャッシュレス会計モーダルを開く
+                openCashlessPaymentModal(method);
+            }
+        });
+    });
 
         // 決済方法選択モーダルのキャンセルボタン
         cancelMethodSelectionBtn?.addEventListener('click', () => paymentMethodModal.classList.add('hidden'));
