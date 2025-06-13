@@ -58,7 +58,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const FEE_RATES = {
         credit_card: 0.0250, // 例: 2.50%
         e_money: 0.0325,     // 例: 3.25%
-        qr_code: 0.0325      // 例: 3.25%
+        qr_code: 0.0325,      // 例: 3.25%
+        ic_card: 0.0325 // 例: 1.50%
     };
 
     // --- 3. 初期化処理 ---
@@ -162,15 +163,52 @@ document.addEventListener('DOMContentLoaded', () => {
         cashlessPaymentModal.classList.remove('hidden');
     }
 
-    // --- 4. ログインとアラートの機能 ---
+    /**
+     * ログイン・ログアウト処理
+     */
     function setupLoginSystem() {
-        if (!loginModal || !loginSubmitButton) return;
+        const employeeIdInput = document.getElementById('employee-id-input');
+        const loginSubmitBtn = document.getElementById('login-submit-button');
+
+        if (!loginModal || !loginSubmitBtn || !employeeIdInput) return;
+
+        // 初期状態ではログインモーダルを表示
         loginModal.classList.remove('hidden');
-        loginSubmitButton.addEventListener('click', () => loginModal.classList.add('hidden'));
+
+        // ログインボタンがクリックされたときの処理
+        loginSubmitBtn.addEventListener('click', async () => {
+            const inputId = employeeIdInput.value.trim();
+            if (inputId === '') {
+                alert('学籍番号を入力してください。');
+                return;
+            }
+
+            try {
+                // Firestoreのemployeesコレクションを検索
+                const querySnapshot = await db.collection('employees').where('studentId', '==', inputId).get();
+
+                if (querySnapshot.empty) {
+                    // ドキュメントが見つからない場合
+                    alert('この学籍番号は登録されていません。');
+                    employeeIdInput.value = ''; // 入力欄をクリア
+                } else {
+                    // ドキュメントが見つかった場合（ログイン成功）
+                    console.log(`ログイン成功: ${inputId}`);
+                    loginModal.classList.add('hidden'); // モーダルを閉じる
+                }
+
+            } catch (error) {
+                console.error("ログイン認証エラー: ", error);
+                alert("ログイン処理中にエラーが発生しました。");
+            }
+        });
+
+        // ログアウトボタンの処理
         logoutButton?.addEventListener('click', () => {
             if (confirm('ログアウトしますか？')) {
                 clearCart();
-                loginModal.classList.remove('hidden');
+                employeeIdInput.value = ''; // 入力欄をクリア
+                loginModal.classList.remove('hidden'); // ログインモーダルを再表示
             }
         });
     }
@@ -304,7 +342,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // ...
     /**
      * 会計を確定し、データをFirestoreに保存する
-     * @param {string} paymentMethod - 'cash', 'credit_card', 'e_money', 'qr_code'
+     * @param {string} paymentMethod - 'cash', 'credit_card', 'e_money', 'qr_code', 'ic_card'
      */// ★★★ 会計確定処理をスプレッドシート連携版に更新 ★★★
     async function confirmPayment(paymentMethod) {
         let totalAmount, amountReceived, changeGiven, fee = 0;
@@ -346,7 +384,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 totalAmount,
                 amountReceived,
                 changeGiven,
-                paymentMethod, // 'cash', 'credit_card', 'e_money', 'qr_code' のいずれかが入る
+                paymentMethod, // 'cash', 'credit_card', 'e_money', 'qr_code', 'ic_card' のいずれかが入る
                 ticketNumber: newTicketNumber,
                 status: "completed",
                 discount: currentDiscount
