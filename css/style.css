@@ -527,6 +527,9 @@ body.queue-info-body {
     border-color: var(--orange);
 }
 .checkout-btn.new img {
-    height: 50px;
-    margin-bottom: 0px;
+    height: 32px;
+    width: auto; /* 幅を自動調整 */
+    max-width: 100%; /* ボタンの幅をはみ出さないようにする */
+    object-fit: contain; /* アスペクト比を保ちつつ、領域内に収める */
+    margin-bottom: 5px;
 }
