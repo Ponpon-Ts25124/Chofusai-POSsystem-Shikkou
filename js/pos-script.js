@@ -48,6 +48,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let products = [];
     let currentDiscount = { type: null, amount: 0 };
     let alerts = {};
+    let cashInDrawer = {}; // ★★★ この行を追加 ★★★
     const db = firebase.firestore();
     const queueStatusRef = db.collection('queue').doc('currentStatus');
     let salesChartInstance = null;
@@ -213,15 +214,41 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    function initializeCashManagement() {
+    async function initializeCashManagement() {
         // 1時間ごとにレジ点検アラートを追加
         setInterval(() => addAlert('cash_check', 'レジ点検を行ってください'), 1000 * 60 * 60);
 
         // Firestoreから釣銭設定を監視
         db.collection('setting').doc('cashConfig').onSnapshot(doc => {
-            if (!doc.exists) return;
-            // checkCashLevels(doc.data()); // 将来の釣銭枚数チェックロジック用
+            if (!doc.exists) {
+                console.error("釣銭設定(cashConfig)が見つかりません。");
+                return;
+            }
+            const config = doc.data();
+            
+            // ★★★ 現金枚数の初期化とチェック処理を追加 ★★★
+            initializeCashInDrawer(config); // レジ内現金を初期化
+            checkCashLevels(config);    // 起動時に一度チェック
         });
+    }
+
+    /**
+     * レジ内の金種別枚数を初期化する
+     * @param {object} config - Firestoreから取得したcashConfigデータ
+     */
+    function initializeCashInDrawer(config) {
+        if (config && config.initialCounts) {
+            cashInDrawer = { ...config.initialCounts };
+            console.log("レジ内現金枚数を初期化しました:", cashInDrawer);
+        } else {
+            console.warn("FirestoreにinitialCountsの設定が見つからないため、現金枚数を初期化できません。");
+            // 設定がない場合、すべての金種を0で初期化
+            if (config && config.denominations) {
+                Object.keys(config.denominations).forEach(value => {
+                    cashInDrawer[value] = 0;
+                });
+            }
+        }
     }
 
     function addAlert(id, message) {
@@ -358,6 +385,18 @@ document.addEventListener('DOMContentLoaded', () => {
             changeGiven = 0;
             fee = Math.round(totalAmount * (FEE_RATES[paymentMethod] || 0));
         }
+    
+            // ★★★ 現金会計の場合、レジ内現金を更新 ★★★
+        if (paymentMethod === 'cash') {
+            updateCashInDrawer(totalAmount, changeGiven);
+            
+            // 会計後に再度、釣銭レベルをチェック
+            db.collection('setting').doc('cashConfig').get().then(doc => {
+                if (doc.exists) {
+                    checkCashLevels(doc.data());
+                }
+            });
+        }
         
         try {
             const newTicketNumber = await db.runTransaction(async (transaction) => {
@@ -422,8 +461,54 @@ document.addEventListener('DOMContentLoaded', () => {
             cashlessPaymentModal.classList.add('hidden');
         } catch (error) {
             console.error("会計処理エラー: ", error);
-            alert("会計処理中にエラーが発生しました。");
+            alert(`会計完了。\n整理番号: ${newTicketNumber}\n合計: ${totalAmount}円`);        }
+    }
+
+    /**
+     * レジ内の現金枚数を更新する（簡易版）
+     * @param {number} salesAmount - 売上金額
+     * @param {number} changeAmount - お釣り金額
+     */
+    function updateCashInDrawer(salesAmount, changeAmount) {
+        // この関数は簡易的なシミュレーションです。
+        // 正確な枚数管理には、お釣りをどの金種で渡したかの計算が必要です。
+        // ここでは、1000円札が増え、100円玉と10円玉が減るという仮定で実装します。
+        if (cashInDrawer['1000']) {
+            cashInDrawer['1000'] += Math.floor(salesAmount / 1000);
         }
+        if (cashInDrawer['100']) {
+            cashInDrawer['100'] -= Math.floor(changeAmount / 100);
+        }
+        if (cashInDrawer['10']) {
+            cashInDrawer['10'] -= Math.floor((changeAmount % 100) / 10);
+        }
+        console.log("レジ内現金を更新しました:", cashInDrawer);
+    }
+
+    /**
+     * 釣銭の枚数がしきい値以下になっていないかチェックし、アラートを発行/解除する
+     * @param {object} config - Firestoreから取得したcashConfigデータ
+     */
+    function checkCashLevels(config) {
+        if (!config || !config.thresholds || !config.denominations) return;
+
+        const thresholds = config.thresholds;
+        const denominations = config.denominations;
+
+        Object.keys(thresholds).forEach(value => {
+            const thresholdCount = thresholds[value];
+            const currentCount = cashInDrawer[value] || 0;
+            const alertId = `cash_level_${value}`;
+            const coinName = denominations[value] || `${value}円`;
+
+            if (currentCount <= thresholdCount) {
+                // しきい値以下ならアラートを追加
+                addAlert(alertId, `釣銭準備金がもうすぐなくなります。${coinName}を補充してください。`);
+            } else {
+                // しきい値を超えていれば、もしアラートがあれば解除
+                removeAlert(alertId);
+            }
+        });
     }
 
     function generateKeypad() {
