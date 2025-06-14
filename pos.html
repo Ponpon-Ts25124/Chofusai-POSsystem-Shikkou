@@ -49,12 +49,12 @@
                 <div id="discount-display-area" class="discount-display hidden">
                     <span>値引:</span>
                     <span id="discount-amount-display"></span>
-                    <button id="cancel-discount-btn">×</button>
+                    <button id="cancel-discount-btn">✕</button>
                 </div>
             </div>
             <div class="cart-total-area">
                 <div class="total-box">
-                    <div class="total-label">合　計</div>
+                    <div class="total-label">合 計</div>
                     <div class="total-amount-display">¥ <span id="total-amount">0</span></div>
                 </div>
             </div>
@@ -224,6 +224,24 @@
             <div class="modal-btn-area">
                 <button id="cancel-cashless-payment-button" class="cancel-btn">キャンセル</button>
                 <button id="confirm-cashless-payment-button" class="confirm-btn">支払いを確定する</button>
+            </div>
+        </div>
+    </div>
+
+        <!-- ★★★ 呼出完了モーダル ★★★ -->
+    <div id="serving-control-modal" class="modal hidden">
+        <div class="modal-content wide">
+            <span class="close-modal-button">✕</span>
+            <h4>呼出・お渡し管理</h4>
+            <div class="serving-control-container">
+                <div class="serving-column">
+                    <h5>調理完了待ち</h5>
+                    <ul id="serving-making-list"></ul>
+                </div>
+                <div class="serving-column">
+                    <h5>お渡し可能</h5>
+                    <ul id="serving-ready-list"></ul>
+                </div>
             </div>
         </div>
     </div>

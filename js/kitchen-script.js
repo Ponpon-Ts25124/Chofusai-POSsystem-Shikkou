@@ -2,16 +2,18 @@
 
 document.addEventListener('DOMContentLoaded', () => {
     const kitchenOrderListDiv = document.getElementById('kitchen-order-list');
+    if (!kitchenOrderListDiv) return;
+
     const db = firebase.firestore();
 
     // kitchenQueueコレクションをリアルタイムで監視
     db.collection('kitchenQueue')
       .orderBy('orderTimestamp', 'asc')
       .onSnapshot(snapshot => {
-          kitchenOrderListDiv.innerHTML = ''; // リストをクリア
+          kitchenOrderListDiv.innerHTML = ''; // 毎回リストをクリア
 
           if (snapshot.empty) {
-              kitchenOrderListDiv.innerHTML = '<p>現在、作成待ちの注文はありません。</p>';
+              kitchenOrderListDiv.innerHTML = '<p>現在、調理する注文はありません。</p>';
               return;
           }
 
@@ -53,7 +55,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // 「調理完了」ボタンにイベントリスナーを設定
         card.querySelector('.complete-btn').addEventListener('click', handleCompletion);
-
         return card;
     }
 
@@ -83,7 +84,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
             });
 
-            // kitchenQueueから完了した注文を削除
+            // ★★★★★ ここが重要 ★★★★★
+            // kitchenQueueから完了した注文ドキュメントを削除
             await db.collection('kitchenQueue').doc(String(ticketNumber)).delete();
 
             console.log(`整理番号 ${ticketNumber} を完了しました。`);
@@ -95,7 +97,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 経過時間を計算する関数
     function calculateTimeElapsed(timestamp) {
-        if (!timestamp) return '---';
+        if (!timestamp || !timestamp.toDate) return '---';
         const now = new Date();
         const orderTime = timestamp.toDate();
         const diffMinutes = Math.floor((now - orderTime) / 60000);

@@ -76,26 +76,22 @@ document.addEventListener('DOMContentLoaded', () => {
         initializeCashManagement();
     }
 
-function setupEventListeners() {
-    // ★★★★★ 新しい5つの決済ボタンにイベントを設定 ★★★★★
-    document.querySelectorAll('.checkout-btn.new').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-            const method = e.currentTarget.dataset.method;
-            if (method === 'cash') {
-                // 現金ボタンが押されたら、現金会計モーダルを開く
-                openPaymentModal();
-            } else {
-                // それ以外のボタン（クレジット等）が押されたら、キャッシュレス会計モーダルを開く
-                openCashlessPaymentModal(method);
-            }
+    function setupEventListeners() {
+        // 新しい5つの決済ボタンにイベントを設定
+        document.querySelectorAll('.checkout-btn.new').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const method = e.currentTarget.dataset.method;
+                if (cart.length === 0 && currentDiscount.amount === 0) {
+                    alert("カートが空です。");
+                    return;
+                }
+                if (method === 'cash') {
+                    openPaymentModal();
+                } else {
+                    openCashlessPaymentModal(method);
+                }
+            });
         });
-    });
-
-        // 決済方法選択モーダルのキャンセルボタン
-        cancelMethodSelectionBtn?.addEventListener('click', () => paymentMethodModal.classList.add('hidden'));
-
-        // ★★★★★ ここまで ★★★★★
-
 
         // フッターの中止ボタン
         cancelCartFooterBtn?.addEventListener('click', () => {
@@ -128,34 +124,24 @@ function setupEventListeners() {
      * キャッシュレス決済用のモーダルを開く
      * @param {string} method - 'credit_card', 'e_money', 'qr_code'
      */
+        // openCashlessPaymentModal関数を置き換え
     function openCashlessPaymentModal(method) {
         if (cart.length === 0 && currentDiscount.amount === 0) {
             alert("カートが空です。");
             return;
         }
+        // ★★★ 顧客画面に決済方法を通知 ★★★
+        updateCustomerDisplay(method);
 
         const total = parseFloat(totalAmountSpan.textContent) || 0;
-        const feeRate = FEE_RATES[method] || 0; // 定義した手数料率を取得
-
-        // ★★★★★ ここからが修正箇所 ★★★★★
-
-        // 1. 手数料を計算し、小数点以下を四捨五入する
-        const fee = Math.round(total * feeRate); 
-
-        // 2. 手数料を引いた後の実質的な受取額を計算
+        const feeRate = FEE_RATES[method] || 0;
+        const fee = Math.round(total * feeRate);
         const netAmount = total - fee;
-
-        // 3. 各要素に値を設定
         cashlessModalTotalAmount.textContent = total;
-        cashlessChargeAmount.textContent = total; // 顧客に請求する金額は変わらない
-        cashlessModalFee.textContent = fee; // 四捨五入された手数料
-        cashlessModalNetAmount.textContent = netAmount; // 手数料引き後の金額
-
-        // ★★★★★ ここまで ★★★★★
-
-        // どの決済方法で確定ボタンが押されたかを記録
+        cashlessChargeAmount.textContent = total;
+        cashlessModalFee.textContent = fee;
+        cashlessModalNetAmount.textContent = netAmount;
         confirmCashlessPaymentButton.dataset.method = method;
-
         cashlessPaymentModal.classList.remove('hidden');
     }
 
@@ -348,11 +334,15 @@ function setupEventListeners() {
     }
 
 
-    function openPaymentModal() { // 引数 'cash' を削除
+    // openPaymentModal関数を置き換え
+    function openPaymentModal() {
         if (cart.length === 0 && currentDiscount.amount === 0) {
             alert("カートが空です。");
             return;
         }
+        // ★★★ 顧客画面に決済方法を通知 ★★★
+        updateCustomerDisplay('cash');
+
         const total = parseFloat(totalAmountSpan.textContent) || 0;
         modalTotalAmountSpan.textContent = total;
         modalAmountReceivedInput.value = total;
@@ -460,6 +450,116 @@ function setupEventListeners() {
     }
 
     /**
+     * カートの内容と支払いステータスをお会計表示画面用にFirestoreに保存する
+     * @param {string} [paymentStatus='menu'] - 'menu', 'cash', 'credit_card'など
+     */
+    async function updateCustomerDisplay(paymentStatus = 'menu') {
+        const total = parseFloat(totalAmountSpan.textContent) || 0;
+        const items = cart.map(item => ({
+            name: item.name,
+            quantity: item.quantity,
+            subtotal: item.price * item.quantity
+        }));
+        
+        try {
+            await db.collection('customerDisplay').doc('currentCart').set({ 
+                items, 
+                total,
+                paymentStatus // ★支払いステータスを追加
+            });
+        } catch (error) {
+            console.error("お会計表示画面へのデータ送信エラー:", error);
+        }
+    }
+
+    // addToCart, removeFromCart, clearCart の各関数の最後に updateCustomerDisplay(); を追加
+    function addToCart(product) {
+        const existingItem = cart.find(item => item.id === product.id);
+        if (existingItem) {
+            existingItem.quantity++;
+        } else {
+            cart.push({ ...product, quantity: 1 });
+        }
+        renderCart();
+        updateCustomerDisplay(); // ★この呼び出しが重要
+    }
+    function removeFromCart(productId) {
+        const itemIndex = cart.findIndex(item => item.id === productId);
+        if (itemIndex > -1) {
+            if (cart[itemIndex].quantity > 1) {
+                cart[itemIndex].quantity--;
+            } else {
+                cart.splice(itemIndex, 1);
+            }
+        }
+        renderCart();
+        updateCustomerDisplay(); // ★この呼び出しが重要
+    }
+    function clearCart() {
+        cart = [];
+        clearDiscount();
+        renderCart();
+        updateCustomerDisplay('menu'); // ★この呼び出しが重要
+    }
+
+    /**
+     * 呼出・お渡し管理モーダルを開く
+     */
+    function openServingControlModal() {
+        const modal = document.getElementById('serving-control-modal');
+        const makingList = document.getElementById('serving-making-list');
+        const readyList = document.getElementById('serving-ready-list');
+
+        db.collection('queue').doc('currentStatus').onSnapshot(doc => {
+            if (!doc.exists) return;
+            const data = doc.data();
+            
+            makingList.innerHTML = '';
+            (data.makingTickets || []).sort((a,b)=>a-b).forEach(ticket => {
+                const li = document.createElement('li');
+                li.textContent = `No. ${ticket} (調理完了にする)`;
+                li.onclick = () => moveTicketToReady(ticket);
+                makingList.appendChild(li);
+            });
+
+            readyList.innerHTML = '';
+            (data.readyTickets || []).sort((a,b)=>a-b).forEach(ticket => {
+                const li = document.createElement('li');
+                li.textContent = `No. ${ticket} (お渡し完了にする)`;
+                li.onclick = () => completeServing(ticket);
+                readyList.appendChild(li);
+            });
+        });
+        modal.classList.remove('hidden');
+    }
+
+    // 「調理完了」にする処理
+    async function moveTicketToReady(ticketNumber) {
+        if (!confirm(`整理番号 ${ticketNumber} を調理完了にし、「お渡し可能」に移動しますか？`)) return;
+        await db.runTransaction(async (transaction) => {
+            const queueDoc = await transaction.get(queueStatusRef);
+            if (!queueDoc.exists) throw "Error";
+            transaction.update(queueStatusRef, {
+                makingTickets: firebase.firestore.FieldValue.arrayRemove(ticketNumber),
+                readyTickets: firebase.firestore.FieldValue.arrayUnion(ticketNumber)
+            });
+        });
+    }
+
+    // 「お渡し完了」にする処理
+    async function completeServing(ticketNumber) {
+        if (!confirm(`整理番号 ${ticketNumber} のお渡しを完了しますか？`)) return;
+        await db.runTransaction(async (transaction) => {
+            const queueDoc = await transaction.get(queueStatusRef);
+            if (!queueDoc.exists) throw "Error";
+            transaction.update(queueStatusRef, {
+                readyTickets: firebase.firestore.FieldValue.arrayRemove(ticketNumber),
+                waitingCount: firebase.firestore.FieldValue.increment(-1)
+            });
+        });
+    }
+
+    /**
      * レジ内の現金枚数を更新する（簡易版）
      * @param {number} salesAmount - 売上金額
      * @param {number} changeAmount - お釣り金額
@@ -541,7 +641,7 @@ function setupEventListeners() {
         }
     }
 
-    // --- 6. 業務タブの機能 ---
+    // --- 6. サービスタブの機能 ---
     function setupServiceButtons() {
         if (!serviceListDiv) return;
         serviceListDiv.innerHTML = '';
@@ -557,12 +657,16 @@ function setupEventListeners() {
         });
     }
 
+    // --- 7. 業務タブの機能 ---
     function setupOperationButtons() {
         if (!operationListDiv) return;
         operationListDiv.innerHTML = '';
         [
-            { name: '厨房画面', action: () => window.open('kitchen-display.html', '_blank') },
-            { name: '呼出画面', action: () => window.open('queue-display-dual.html', '_blank') },
+            { name: '作成指示画面(店用)', action: () => window.open('kitchen-prep.html', '_blank') },
+            { name: '作成管理画面(店用)', action: () => window.open('kitchen-complete.html', '_blank') }, // kitchen-display.htmlから変更
+            { name: '呼出画面(客用)', action: () => window.open('queue-display.html', '_blank') },
+            { name: '会計画面(客用)', action: () => window.open('customer-display.html', '_blank') },
+            { name: '呼出管理(店用)', action: openServingControlModal }, // ★新しいモーダルを開く関数
             { name: '販売数確認', action: openSalesStatsModal },
             { name: '値引き', action: () => discountModal.classList.remove('hidden') },
             { name: '売上外入金', action: () => donationModal.classList.remove('hidden') },
@@ -651,65 +755,83 @@ function setupEventListeners() {
             amountInput.value = '';
         } catch (error) { console.error('寄付情報の保存エラー:', error); alert('登録に失敗しました。'); }
     }
-// ...
-async function openCashCheckModal() {
-    cashCheckModal.classList.remove('hidden');
-    const contentEl = document.getElementById('cash-check-content');
-    const theoreticalBalanceEl = document.getElementById('theoretical-balance');
-    const actualBalanceEl = document.getElementById('actual-balance');
-    const differenceEl = document.getElementById('balance-difference');
 
-    contentEl.innerHTML = '<p>データを読み込み中...</p>';
-    theoreticalBalanceEl.textContent = '計算中...';
-    actualBalanceEl.textContent = '0';
-    differenceEl.textContent = '0';
-    
-    try {
-        // --- 1. 必要なデータを並行して取得 ---
-        const [configDoc, salesSnapshot, donationsSnapshot] = await Promise.all([
-            db.collection('setting').doc('cashConfig').get(),
-            db.collection('sales').get(),
-            db.collection('donations').get()
-        ]);
+    async function openCashCheckModal() {
+        cashCheckModal.classList.remove('hidden');
+        const contentEl = document.getElementById('cash-check-content');
+        const theoreticalBalanceEl = document.getElementById('theoretical-balance');
+        const actualBalanceEl = document.getElementById('actual-balance');
+        const differenceEl = document.getElementById('balance-difference');
+        const completeButton = document.getElementById('complete-cash-check-btn');
 
-        if (!configDoc.exists) {
-            contentEl.innerHTML = '<p style="color:red;">釣銭設定が見つかりません。</p>';
-            return;
+        contentEl.innerHTML = '<p>データを読み込み中...</p>';
+        theoreticalBalanceEl.textContent = '計算中...';
+        actualBalanceEl.textContent = '0';
+        differenceEl.textContent = '0';
+        
+        try {
+            // --- 1. 必要なデータを並行して取得 ---
+            const [configDoc, salesSnapshot, donationsSnapshot] = await Promise.all([
+                db.collection('setting').doc('cashConfig').get(),
+                db.collection('sales').get(),
+                db.collection('donations').get()
+            ]);
+
+            if (!configDoc.exists) {
+                contentEl.innerHTML = '<p style="color:red;">釣銭設定が見つかりません。</p>';
+                return;
+            }
+
+            // --- 2. 理論残高を計算 ---
+            const cashConfig = configDoc.data();
+            const initialAmount = cashConfig.initialAmount || 0;
+            const totalSales = salesSnapshot.docs.reduce((sum, doc) => sum + doc.data().totalAmount, 0);
+            const totalDonations = donationsSnapshot.docs.reduce((sum, doc) => sum + doc.data().amount, 0);
+            const theoreticalBalance = initialAmount + totalSales + totalDonations;
+            
+            theoreticalBalanceEl.textContent = theoreticalBalance;
+
+            // --- 3. 金種入力欄を描画 ---
+            const denominations = cashConfig.denominations;
+            contentEl.innerHTML = '';
+            Object.entries(denominations).sort((a, b) => b[0] - a[0]).forEach(([value, name]) => {
+                contentEl.innerHTML += `<div class="modal-input-group"><label>${name}:</label><input type="number" class="cash-count" data-value="${value}" placeholder="枚数"><span>枚</span></div>`;
+            });
+
+            // --- 4. イベントリスナーを設定 ---
+            contentEl.querySelectorAll('.cash-count').forEach(input => {
+                input.addEventListener('input', () => calculateActualBalance(theoreticalBalance));
+            });
+            
+            // ★★★★★ ここからが修正箇所 ★★★★★
+            // 「点検完了」ボタンの処理を更新
+            completeButton.onclick = () => {
+                // 差額を取得
+                const difference = parseInt(differenceEl.textContent) || 0;
+                const alertId = 'cash_check_difference'; // 差額アラート用のID
+
+                // 差額がある場合のみアラートを追加
+                if (difference !== 0) {
+                    const diffMessage = `${Math.abs(difference)}円の差額があります。確認してください。`;
+                    addAlert(alertId, diffMessage);
+                } else {
+                    // 差額がなければ、もし既存の差額アラートがあれば解除する
+                    removeAlert(alertId);
+                }
+
+                // 元々のレジ点検時刻アラートは必ず解除する
+                removeAlert('cash_check'); 
+                
+                cashCheckModal.classList.add('hidden');
+                alert('レジ点検を完了しました。');
+            };
+            // ★★★★★ ここまでが修正箇所 ★★★★★
+
+        } catch (error) {
+            console.error("レジ点検データの読み込みエラー:", error);
+            contentEl.innerHTML = '<p style="color:red;">データ読み込みに失敗しました。</p>';
         }
-
-        // --- 2. 理論残高を計算 ---
-        const cashConfig = configDoc.data();
-        const initialAmount = cashConfig.initialAmount || 0;
-
-        const totalSales = salesSnapshot.docs.reduce((sum, doc) => sum + doc.data().totalAmount, 0);
-        const totalDonations = donationsSnapshot.docs.reduce((sum, doc) => sum + doc.data().amount, 0);
-        
-        const theoreticalBalance = initialAmount + totalSales + totalDonations;
-        theoreticalBalanceEl.textContent = theoreticalBalance;
-
-        // --- 3. 金種入力欄を描画 ---
-        const denominations = cashConfig.denominations;
-        contentEl.innerHTML = '';
-        Object.entries(denominations).sort((a,b) => b[0] - a[0]).forEach(([value, name]) => {
-            contentEl.innerHTML += `<div class="modal-input-group"><label>${name}:</label><input type="number" class="cash-count" data-value="${value}" placeholder="枚数"><span>枚</span></div>`;
-        });
-
-        // --- 4. イベントリスナーを設定 ---
-        contentEl.querySelectorAll('.cash-count').forEach(input => {
-            input.addEventListener('input', () => calculateActualBalance(theoreticalBalance));
-        });
-        
-        document.getElementById('complete-cash-check-btn').onclick = () => {
-            removeAlert('cash_check');
-            cashCheckModal.classList.add('hidden');
-            alert('レジ点検を完了しました。');
-        };
-
-    } catch (error) {
-        console.error("レジ点検データの読み込みエラー:", error);
-        contentEl.innerHTML = '<p style="color:red;">データ読み込みに失敗しました。</p>';
     }
-}
 
 // calculateActualBalance関数も過不足計算機能を追加して修正
 function calculateActualBalance(theoreticalBalance) {
