@@ -730,3 +730,47 @@ body.customer-display-body.new-layout {
 .customer-total-area .total-amount {
     font-size: 4rem; /* 合計金額をさらに大きく */
 }
+
+/* =================================================== */
+/*        レジ開け/締め機能用のCSS (追記)               */
+/* =================================================== */
+
+.register-overlay {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background-color: rgba(30, 41, 59, 0.9); /* 濃いグレーの背景 */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1999; /* ログインモーダルよりは下 */
+    color: white;
+    text-align: center;
+}
+.register-overlay-content h2 {
+    font-size: 3em;
+    margin-bottom: 20px;
+}
+.register-overlay-content p {
+    font-size: 1.2em;
+    line-height: 1.6;
+}
+
+/* レジ点検モーダルの入力欄を少し広げる */
+#cash-check-content .modal-input-group input {
+    min-width: 100px;
+}
+
+/* =================================================== */
+/*    レジ開けボタン用のCSS (オーバーレイ内) (追記)     */
+/* =================================================== */
+
+.register-overlay-content p {
+    margin-bottom: 30px;
+}
+
+.confirm-btn.large {
+    padding: 20px 40px;
+    font-size: 1.5em;
+    width: auto; /* 幅を自動調整 */
+}
