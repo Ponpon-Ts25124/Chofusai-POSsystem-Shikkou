@@ -292,6 +292,34 @@ document.addEventListener('DOMContentLoaded', () => {
             const logData = { paymentMethod, totalAmount, fee, discountAmount: currentDiscount.amount, items: cart };
             await fetch(GAS_WEB_APP_URL, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(logData) });
             
+            // ★★★★★★★★★★★★★★★★★★★★★★★
+            //      ここからがレシート発行処理
+            // ★★★★★★★★★★★★★★★★★★★★★★★
+
+            // 1. 印刷用のデータオブジェクトを作成
+            const now = new Date();
+            const timestamp = `${now.getFullYear()}/${String(now.getMonth() + 1).padStart(2, '0')}/${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+            
+            const receiptData = {
+                timestamp,
+                ticketNumber: newTicketNumber,
+                items: cart.map(item => ({ name: item.name, price: item.price, quantity: item.quantity })),
+                totalAmount,
+                discountAmount: currentDiscount.amount,
+                paymentMethod: paymentMethod.replace('_', ' ').toUpperCase() // "credit_card" -> "CREDIT CARD"
+            };
+            
+            // 2. URLパラメータとしてデータをエンコード
+            const encodedData = encodeURIComponent(JSON.stringify(receiptData));
+            const printUrl = `receipt.html?data=${encodedData}`;
+            
+            // 3. 新しいウィンドウで印刷ページを開く
+            window.open(printUrl, '_blank', 'width=100,height=100,top=0,left=0');
+
+            // ★★★★★★★★★★★★★★★★★★★★★★★
+            //      レシート発行処理はここまで
+            // ★★★★★★★★★★★★★★★★★★★★★★★
+
             if (paymentMethod === 'cash') {
                 updateCashInDrawer(amountReceived, changeGiven);
                 const configDoc = await db.collection('setting').doc('cashConfig').get();
