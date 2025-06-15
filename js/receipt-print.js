@@ -56,13 +56,13 @@ document.addEventListener('DOMContentLoaded', () => {
             alert('レシートの印刷に失敗しました。プリンターの接続を確認してください。');
         }
         // 成功・失敗にかかわらずウィンドウを閉じる
-//        setTimeout(() => window.close(), 1000);
+        setTimeout(() => window.close(), 1000);
     };
 
     trader.onError = (error) => {
         console.error('プリンターとの通信に失敗しました:', error);
         alert('レシートプリンターとの通信に失敗しました。IPアドレスやネットワーク接続を確認してください。');
-//        setTimeout(() => window.close(), 1000);
+        setTimeout(() => window.close(), 1000);
     };
 
 
@@ -75,5 +75,5 @@ document.addEventListener('DOMContentLoaded', () => {
     alert('レシート印刷データがコンソールに出力されました。確認後、このウィンドウは手動で閉じてください。');
 
     // 組み立てた印刷データを送信
-    // trader.sendMessage({ request: builder.getCommands() }); // ★確認が終わったらこの行のコメントを外す
+    trader.sendMessage({ request: builder.getCommands() }); // ★確認が終わったらこの行のコメントを外す
 });
