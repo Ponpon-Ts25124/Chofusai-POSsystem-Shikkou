@@ -292,29 +292,28 @@ document.addEventListener('DOMContentLoaded', () => {
             const logData = { paymentMethod, totalAmount, fee, discountAmount: currentDiscount.amount, items: cart };
             await fetch(GAS_WEB_APP_URL, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(logData) });
             
-            // ★★★★★★★★★★★★★★★★★★★★★★★
-            //      ここからがレシート発行処理
+    // ★★★★★★★★★★★★★★★★★★★★★★★
+            //      ここからがレシート発行処理 (localStorage版)
             // ★★★★★★★★★★★★★★★★★★★★★★★
 
             // 1. 印刷用のデータオブジェクトを作成
             const now = new Date();
-            const timestamp = `${now.getFullYear()}/${String(now.getMonth() + 1).padStart(2, '0')}/${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+            const timestampString = `${now.getFullYear()}/${String(now.getMonth() + 1).padStart(2, '0')}/${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
             
             const receiptData = {
-                timestamp,
+                timestamp: timestampString,
                 ticketNumber: newTicketNumber,
                 items: cart.map(item => ({ name: item.name, price: item.price, quantity: item.quantity })),
                 totalAmount,
                 discountAmount: currentDiscount.amount,
-                paymentMethod: paymentMethod.replace('_', ' ').toUpperCase() // "credit_card" -> "CREDIT CARD"
+                paymentMethod: paymentMethod.replace('_', ' ').toUpperCase()
             };
             
-            // 2. URLパラメータとしてデータをエンコード
-            const encodedData = encodeURIComponent(JSON.stringify(receiptData));
-            const printUrl = `receipt.html?data=${encodedData}`;
+            // 2. localStorageにデータを文字列として保存
+            localStorage.setItem('receiptDataForPrint', JSON.stringify(receiptData));
             
             // 3. 新しいウィンドウで印刷ページを開く
-            window.open(printUrl, '_blank', 'width=100,height=100,top=0,left=0');
+            window.open('receipt.html', '_blank', 'width=100,height=100,top=0,left=0');
 
             // ★★★★★★★★★★★★★★★★★★★★★★★
             //      レシート発行処理はここまで
