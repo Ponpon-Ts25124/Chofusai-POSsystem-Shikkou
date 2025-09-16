@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>ご注文状況</title>
+    <link rel="manifest" href="/manifest.json">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="POSレジ">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="waiting-container">
+        <div class="waiting-section">
+            <h1>調理中のお客様番号</h1>
+            <div id="waiting-list"></div>
+        </div>
+        <div class="calling-section">
+            <h1>お呼び出し中のお客様番号</h1>
+            <div id="calling-list"></div>
+        </div>
+    </div>
+
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+
+    <script src="firebase-config.js"></script>
+    <script>
+        const waitingList = document.getElementById('waiting-list');
+        const callingList = document.getElementById('calling-list');
+
+        // 直近3時間以内の注文を対象にする（古いデータが表示され続けないように）
+        const threeHoursAgo = new Date(Date.now() - 3 * 60 * 60 * 1000);
+
+        db.collection('orders')
+          .where('createdAt', '>', firebase.firestore.Timestamp.fromDate(threeHoursAgo))
+          .orderBy('createdAt', 'desc')
+          .onSnapshot(snapshot => {
+              const waitingNumbers = [];
+              const callingNumbers = [];
+
+              snapshot.forEach(doc => {
+                  const order = doc.data();
+                  if (order.status === 'processing') {
+                      waitingNumbers.push(order.orderNumber);
+                  } else if (order.status === 'completed') {
+                      callingNumbers.push(order.orderNumber);
+                  }
+              });
+              
+              // 番号順にソート
+              waitingNumbers.sort((a, b) => a - b);
+              callingNumbers.sort((a, b) => a - b);
+
+              renderNumbers(waitingList, waitingNumbers, 'waiting-number');
+              renderNumbers(callingList, callingNumbers, 'calling-number');
+          });
+
+        function renderNumbers(container, numbers, className) {
+            container.innerHTML = '';
+            // 最新5件まで表示
+            numbers.slice(-5).forEach(number => {
+                 const numberEl = document.createElement('div');
+                 numberEl.className = className;
+                 numberEl.textContent = number;
+                 container.appendChild(numberEl);
+            });
+        }
+    </script>
+</body>
+</html>

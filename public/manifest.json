@@ -1,0 +1,21 @@
+{
+  "name": "文化祭POSレジ",
+  "short_name": "POSレジ",
+  "start_url": "/index.html",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#007bff",
+  "orientation": "landscape",
+  "icons": [
+    {
+      "src": "images/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/192×192png"
+    },
+    {
+      "src": "images/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/512×512png"
+    }
+  ]
+}

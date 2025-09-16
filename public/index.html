@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, height=device-height, user-scalable=no">
+    <title>POSレジ - 店員画面</title>
+    <link rel="manifest" href="/manifest.json">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="POSレジ">
+    <!-- style.cssを読み込む代わりに、ここに直接スタイルを記述します -->
+    <style>
+        html, body { overflow: hidden; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; margin: 0; padding: 20px; background-color: #f4f6f8; color: #333; height: 100vh; box-sizing: border-box;}
+        .container { display: flex; height: 100%; }
+        .left-pane { flex: 2; margin-right: 20px; }
+        .right-pane { flex: 1; }
+        .products-grid { display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: calc((100% - 15px)/2) calc((100% - 15px)/2); gap: 15px; height: 100%; }
+        .product-tile { background-color: #fff; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); cursor: pointer; transition: transform 0.1s; display: flex; flex-direction: column; align-items: center; justify-content: space-between; padding: 10px; }
+        .product-tile:active { transform: scale(0.95); }
+        .product-tile img { width: 100%; height: 60%; object-fit: cover; border-radius: 4px; margin-bottom: 10px; }
+        .product-tile .product-name { font-size: 1.5em; font-weight: bold; text-align: center; }
+        .product-tile .product-price { font-size: 1.25em; color: #555; margin-top: 5px; text-align: center; }
+        .cart-container { background-color: #fff; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); display: flex; flex-direction: column; height: 100%; }
+        .cart-header { padding: 15px 20px; border-bottom: 1px solid #eee; font-size: 1.5em; font-weight: bold; position: relative; }
+        .cart-items { flex-grow: 1; overflow-y: auto; padding: 10px; }
+        .cart-item { display: flex; justify-content: space-between; align-items: center; padding: 15px; border-bottom: 1px solid #f0f0f0; }
+        .cart-item-name { font-size: 1.1em; flex-grow: 1;}
+        .cart-item-controls { display: flex; align-items: center; }
+        .quantity-btn { width: 30px; height: 30px; border: 1px solid #ccc; background-color: #f9f9f9; border-radius: 50%; font-size: 1.2em; cursor: pointer; }
+        .quantity { margin: 0 15px; font-size: 1.2em; }
+        .cart-item-price { font-weight: bold; min-width: 80px; text-align: right; }
+        .delete-btn { background: #ff4d4d; color: white; border: none; padding: 5px 10px; border-radius: 5px; cursor: pointer; margin-left:15px; }
+        .cart-footer { padding: 20px; border-top: 1px solid #eee; }
+        .total-row { display: flex; justify-content: space-between; font-size: 1.5em; font-weight: bold; margin-bottom: 15px; }
+        .checkout-btn { width: 100%; padding: 15px; font-size: 1.3em; font-weight: bold; background-color: #007bff; color: white; border: none; border-radius: 8px; cursor: pointer; }
+        .checkout-btn:disabled { background-color: #ccc; }
+        .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); justify-content: center; align-items: center; }
+        .modal-content { background-color: #fff; padding: 30px; border-radius: 8px; width: 480px; }
+        #secret-menu-trigger { position: absolute; top: 0; right: 0; width: 60px; height: 100%; cursor: pointer; }
+        .nav-links { margin: 20px 0; display: flex; flex-direction: column; gap: 15px; }
+        .nav-links a { display: block; padding: 15px; background-color: #f0f0f0; color: #333; text-decoration: none; font-size: 1.1em; font-weight: bold; border-radius: 8px; transition: background-color 0.2s; }
+        .nav-links a:hover { background-color: #e0e0e0; }
+        #close-nav-modal-btn { padding: 10px 20px; font-size: 1em; cursor: pointer; background-color: #6c757d; color: white; border: none; border-radius: 5px; }
+        .payment-methods { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px; }
+        .payment-btn { padding: 20px; font-size: 1.2em; font-weight: bold; border: 2px solid #ccc; border-radius: 8px; cursor: pointer; background-color: #f9f9f9; transition: background-color 0.2s, border-color 0.2s; }
+        .payment-btn.active { background-color: #e7f3ff; border-color: #007bff; }
+        .keypad-container { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 15px; }
+        .keypad-btn { padding: 20px 0; font-size: 1.8em; border: 1px solid #ddd; border-radius: 8px; background-color: #fff; cursor: pointer; }
+        .keypad-btn:active { background-color: #f0f0f0; }
+        #deposit-display { background-color: #f0f2f5; border-radius: 8px; padding: 15px; font-size: 2em; font-weight: bold; text-align: right; margin-bottom: 10px; min-height: 40px; }
+        .confirm-payment-area { margin-top: 20px; display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        .confirm-payment-area button { padding: 15px; font-size: 1.2em; font-weight: bold; border: none; border-radius: 8px; cursor: pointer; color: white; }
+        #confirm-payment-btn { background-color: #28a745; }
+        #close-modal-btn { background-color: #6c757d; }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <div class="left-pane">
+            <div class="products-grid" id="products-grid"></div>
+        </div>
+        <div class="right-pane">
+            <div class="cart-container">
+                <div class="cart-header">
+                    カート
+                    <div id="secret-menu-trigger"></div>
+                </div>
+                <div class="cart-items" id="cart-items"></div>
+                <div class="cart-footer">
+                    <div class="total-row">
+                        <span>合計</span>
+                        <span id="total-amount">¥0</span>
+                    </div>
+                    <button class="checkout-btn" id="checkout-btn" disabled>会計</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="checkout-modal" class="modal">
+        <div class="modal-content">
+            <h2>お会計</h2>
+            <p>合計金額: <strong id="modal-total">¥0</strong></p>
+            <div class="payment-methods">
+                <button class="payment-btn active" data-method="cash">現金</button>
+                <button class="payment-btn" data-method="paypay">PayPay</button>
+            </div>
+            <div id="cash-payment-area">
+                <label>お預かり金額</label>
+                <div id="deposit-display"></div>
+                <div class="keypad-container">
+                    <button class="keypad-btn" data-key="7">7</button>
+                    <button class="keypad-btn" data-key="8">8</button>
+                    <button class="keypad-btn" data-key="9">9</button>
+                    <button class="keypad-btn" data-key="4">4</button>
+                    <button class="keypad-btn" data-key="5">5</button>
+                    <button class="keypad-btn" data-key="6">6</button>
+                    <button class="keypad-btn" data-key="1">1</button>
+                    <button class="keypad-btn" data-key="2">2</button>
+                    <button class="keypad-btn" data-key="3">3</button>
+                    <button class="keypad-btn" data-key="0">0</button>
+                    <button class="keypad-btn" data-key="00">00</button>
+                    <button class="keypad-btn" data-key="C">C</button>
+                </div>
+                <p style="font-size: 1.5em;">お釣り: <strong id="change-amount">¥0</strong></p>
+            </div>
+            <div class="confirm-payment-area">
+                <button id="confirm-payment-btn">会計確定</button>
+                <button id="close-modal-btn">キャンセル</button>
+            </div>
+        </div>
+    </div>
+    
+    <div id="navigation-modal" class="modal">
+        <div class="modal-content">
+            <h2>ページ移動</h2>
+            <div class="nav-links">
+                <a href="/customer.html" target="_blank">お客様画面</a>
+                <a href="/waiting.html" target="_blank">お待ち状況画面</a>
+                <a href="/kds.html" target="_blank">厨房画面 (KDS)</a>
+                <a href="/pickup.html" target="_blank">受付・呼び出し画面</a>
+                <a href="/login.html" target="_blank">管理画面</a>
+            </div>
+            <button id="close-nav-modal-btn">閉じる</button>
+        </div>
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+    <script src="firebase-config.js"></script>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // --- 1. HTML要素の取得 ---
+        const productsGrid = document.getElementById('products-grid');
+        const cartItemsContainer = document.getElementById('cart-items');
+        const totalAmountEl = document.getElementById('total-amount');
+        const checkoutBtn = document.getElementById('checkout-btn');
+        const modal = document.getElementById('checkout-modal');
+        const modalTotalEl = document.getElementById('modal-total');
+        const changeAmountEl = document.getElementById('change-amount');
+        const confirmPaymentBtn = document.getElementById('confirm-payment-btn');
+        const closeModalBtn = document.getElementById('close-modal-btn');
+        const secretMenuTrigger = document.getElementById('secret-menu-trigger');
+        const navModal = document.getElementById('navigation-modal');
+        const closeNavModalBtn = document.getElementById('close-nav-modal-btn');
+        const depositDisplay = document.getElementById('deposit-display');
+        const paymentBtns = document.querySelectorAll('.payment-btn');
+        const keypadBtns = document.querySelectorAll('.keypad-btn');
+        const cashPaymentArea = document.getElementById('cash-payment-area');
+
+        // --- 2. グローバル変数の定義 (割引ルール用の変数を追加) ---
+        let products = [];
+        let cart = {};
+        let bundleDeals = []; // ★セット割引ルールを保持する配列
+        let tapCount = 0;
+        let tapTimer = null;
+        let depositAmount = '';
+        let selectedPaymentMethod = 'cash';
+
+        // --- 3. メイン処理：商品と割引ルールを両方取得 ---
+        async function initialize() {
+            try {
+                // 商品データを取得
+                const productsPromise = db.collection('products').orderBy('sortOrder').get();
+                // 有効なセット割引ルールを取得
+                const dealsPromise = db.collection('bundleDeals').where('isActive', '==', true).orderBy('priority', 'desc').get();
+                
+                const [productsSnapshot, dealsSnapshot] = await Promise.all([productsPromise, dealsPromise]);
+
+                products = productsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                bundleDeals = dealsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+                renderProducts();
+            } catch (error) {
+                console.error("初期データの読み込みに失敗:", error);
+                alert("データの読み込みに失敗しました。");
+            }
+        }
+        initialize();
+
+        // --- 4. カート情報のリアルタイム監視 ---
+        const cartDocRef = db.collection('currentOrder').doc('main_register');
+        cartDocRef.onSnapshot(doc => {
+            cart = doc.data()?.items || {};
+            renderCart();
+        });
+
+        // --- 5. 関数定義 (renderCart と calculateTotal を刷新) ---
+        
+        /**
+         * セット割引を計算するコアロジック
+         * @param {object} currentCart - 現在のカート
+         * @returns {object} - { finalTotal, discountAmount }
+         */
+        function applyBundleDiscounts(currentCart) {
+            let originalTotal = 0;
+            let finalTotal = 0;
+            let discountAmount = 0;
+            
+            // 割引計算用に、カート内の商品をIDのフラットなリストに変換
+            const cartItemsFlat = [];
+            for (const productId in currentCart) {
+                const product = products.find(p => p.id === productId);
+                if(product) {
+                    originalTotal += (product.price - (product.discount || 0)) * currentCart[productId];
+                    for (let i = 0; i < currentCart[productId]; i++) {
+                        cartItemsFlat.push(productId);
+                    }
+                }
+            }
+            
+            // 優先度順に割引ルールをチェック
+            for (const deal of bundleDeals) {
+                // この割引ルールの対象商品だけをカートから抽出
+                const eligibleItems = cartItemsFlat.filter(id => deal.eligibleProductIds.includes(id));
+                
+                // 対象商品が必要個数以上ある限り、割引を適用
+                while (eligibleItems.length >= deal.requiredCount) {
+                    finalTotal += deal.bundlePrice; // セット価格を合計に加算
+                    
+                    // 割引を適用した商品をリストから削除
+                    let itemsToRemove = deal.requiredCount;
+                    for (let i = cartItemsFlat.length - 1; i >= 0; i--) {
+                        if (itemsToRemove > 0 && deal.eligibleProductIds.includes(cartItemsFlat[i])) {
+                            // eligibleItemsからも同期して削除
+                            const indexInEligible = eligibleItems.indexOf(cartItemsFlat[i]);
+                            if(indexInEligible > -1) eligibleItems.splice(indexInEligible, 1);
+                            
+                            cartItemsFlat.splice(i, 1);
+                            itemsToRemove--;
+                        }
+                    }
+                }
+            }
+
+            // 割引適用されずに残った商品を通常価格で加算
+            cartItemsFlat.forEach(productId => {
+                const product = products.find(p => p.id === productId);
+                if(product) finalTotal += (product.price - (product.discount || 0));
+            });
+
+            discountAmount = originalTotal - finalTotal;
+            return { finalTotal, discountAmount, originalTotal };
+        }
+
+        function renderCart() {
+            cartItemsContainer.innerHTML = '';
+            
+            const { finalTotal, discountAmount, originalTotal } = applyBundleDiscounts(cart);
+            
+            // 通常の商品リストを表示
+            Object.keys(cart).forEach(productId => {
+                const product = products.find(p => p.id === productId);
+                if (!product) return;
+                const quantity = cart[productId];
+                const subtotal = (product.price - (product.discount || 0)) * quantity;
+                const itemEl = document.createElement('div');
+                itemEl.className = 'cart-item';
+                itemEl.innerHTML = `<span class="cart-item-name">${product.name}</span><div class="cart-item-controls"><button class="quantity-btn decrease-btn">-</button><span class="quantity">${quantity}</span><button class="quantity-btn increase-btn">+</button></div><span class="cart-item-price">¥${subtotal.toLocaleString()}</span><button class="delete-btn">×</button>`;
+                itemEl.querySelector('.decrease-btn').addEventListener('click', () => updateQuantity(productId, -1));
+                itemEl.querySelector('.increase-btn').addEventListener('click', () => updateQuantity(productId, 1));
+                itemEl.querySelector('.delete-btn').addEventListener('click', () => removeFromCart(productId));
+                cartItemsContainer.appendChild(itemEl);
+            });
+            
+            // 割引が適用されていれば、割引行を追加
+            if (discountAmount > 0) {
+                const discountEl = document.createElement('div');
+                discountEl.className = 'cart-item';
+                discountEl.innerHTML = `<span class="cart-item-name" style="color: #dc3545; font-weight: bold;">セット割引</span><span class="cart-item-price" style="color: #dc3545; font-weight: bold;">- ¥${discountAmount.toLocaleString()}</span>`;
+                cartItemsContainer.appendChild(discountEl);
+            }
+
+            totalAmountEl.textContent = `¥${finalTotal.toLocaleString()}`;
+            checkoutBtn.disabled = Object.keys(cart).length === 0;
+        }
+        
+        // calculateTotalは割引後の金額を返すように変更
+        function calculateTotal() {
+            return applyBundleDiscounts(cart).finalTotal;
+        }
+
+        function renderProducts() {
+            productsGrid.innerHTML = '';
+            products.forEach(product => {
+                const tile = document.createElement('div');
+                tile.className = 'product-tile';
+                const imageUrl = product.imagePath || 'https://via.placeholder.com/150';
+                tile.innerHTML = `<img src="${imageUrl}" alt="${product.name}"><div><div class="product-name">${product.name}</div><div class="product-price">¥${product.price.toLocaleString()}</div></div>`;
+                tile.onclick = () => addToCart(product.id);
+                productsGrid.appendChild(tile);
+            });
+        }
+
+        function addToCart(productId) {
+            cart[productId] = (cart[productId] || 0) + 1;
+            updateFirestoreCart();
+        }
+
+        function updateQuantity(productId, change) {
+            const newQuantity = (cart[productId] || 0) + change;
+            if (newQuantity > 0) {
+                cart[productId] = newQuantity;
+            } else {
+                delete cart[productId];
+            }
+            updateFirestoreCart();
+        }
+
+        function removeFromCart(productId) {
+            delete cart[productId];
+            updateFirestoreCart();
+        }
+
+        function updateFirestoreCart() {
+            cartDocRef.set({ items: cart });
+        }
+
+        function updatePaymentView() {
+            cashPaymentArea.style.display = selectedPaymentMethod === 'cash' ? 'block' : 'none';
+            const depositValue = parseInt(depositAmount) || 0;
+            depositDisplay.textContent = `¥${depositValue.toLocaleString()}`;
+            const total = calculateTotal();
+            const change = depositValue - total;
+            changeAmountEl.textContent = `¥${change >= 0 ? change.toLocaleString() : '---'}`;
+        }
+
+        // --- 6. イベントリスナーの設定 ---
+        checkoutBtn.onclick = () => {
+            depositAmount = '';
+            selectedPaymentMethod = 'cash';
+            updatePaymentView();
+            db.collection('paymentInstructions').doc('main_customer_display').set({ show: false });
+            modal.style.display = 'flex';
+            modalTotalEl.textContent = `¥${calculateTotal().toLocaleString()}`;
+        };
+
+        closeModalBtn.onclick = async () => {
+            await db.collection('paymentInstructions').doc('main_customer_display').set({ show: false });
+            modal.style.display = 'none';
+        };
+
+        paymentBtns.forEach(btn => {
+            btn.addEventListener('click', async () => {
+                paymentBtns.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                selectedPaymentMethod = btn.dataset.method;
+                
+                if (selectedPaymentMethod === 'paypay') {
+                    const paypayInstruction = {
+                        show: true,
+                        amount: calculateTotal(),
+                        qrImagePath: 'images/paypay_qr.png'
+                    };
+                    await db.collection('paymentInstructions').doc('main_customer_display').set(paypayInstruction);
+                } else {
+                    await db.collection('paymentInstructions').doc('main_customer_display').set({ show: false });
+                }
+                updatePaymentView();
+            });
+        });
+
+        keypadBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                const key = btn.dataset.key;
+                if (key === 'C') {
+                    depositAmount = '';
+                } else {
+                    depositAmount += key;
+                }
+                updatePaymentView();
+            });
+        });
+        
+        confirmPaymentBtn.onclick = async () => {
+            const total = calculateTotal();
+            const deposit = parseInt(depositAmount) || 0;
+            if (selectedPaymentMethod === 'cash' && deposit < total) {
+                alert('お預かり金額が不足しています。');
+                return;
+            }
+            
+            const settingsRef = db.collection('settings').doc('config');
+            try {
+                const newOrderNumber = await db.runTransaction(async (transaction) => {
+                    const settingsDoc = await transaction.get(settingsRef);
+                    const newNumber = (settingsDoc.data().lastOrderNumber || 100) + 1;
+                    transaction.update(settingsRef, { lastOrderNumber: newNumber });
+                    return newNumber;
+                });
+                const orderItems = Object.keys(cart).map(productId => {
+                    const product = products.find(p => p.id === productId);
+                    return { productId, name: product.name, price: product.price, cost: product.cost, discount: product.discount || 0, quantity: cart[productId] };
+                });
+                
+                await db.collection('orders').add({
+                    orderNumber: newOrderNumber,
+                    items: orderItems,
+                    totalAmount: total,
+                    deposit: selectedPaymentMethod === 'cash' ? deposit : total,
+                    change: selectedPaymentMethod === 'cash' ? deposit - total : 0,
+                    paymentMethod: selectedPaymentMethod,
+                    status: 'processing',
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+                
+                if (selectedPaymentMethod === 'paypay') {
+                    await db.collection('paymentInstructions').doc('main_customer_display').set({ show: false });
+                }
+                
+                await cartDocRef.set({ items: {} });
+                
+                alert(`会計完了しました。お客様番号は「${newOrderNumber}」です。`);
+                modal.style.display = 'none';
+
+            } catch (e) {
+                console.error("取引に失敗しました:", e);
+                alert("会計処理に失敗しました。");
+                if (selectedPaymentMethod === 'paypay') {
+                    await db.collection('paymentInstructions').doc('main_customer_display').set({ show: false });
+                }
+            }
+        };
+
+        secretMenuTrigger.addEventListener('click', () => {
+            tapCount++;
+            clearTimeout(tapTimer);
+            if (tapCount >= 5) {
+                navModal.style.display = 'flex';
+                tapCount = 0;
+            } else {
+                tapTimer = setTimeout(() => { tapCount = 0; }, 1500);
+            }
+        });
+
+        closeNavModalBtn.addEventListener('click', () => {
+            navModal.style.display = 'none';
+        });
+    });
+    </script>
+</body>
+</html>

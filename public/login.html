@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>管理者ログイン</title>
+    <link rel="manifest" href="/manifest.json">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="POSレジ">
+    <link rel="stylesheet" href="style.css">
+    <style>
+        html, body { overflow: hidden; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; margin: 0; padding: 20px; background-color: #f4f6f8; color: #333; height: 100vh; box-sizing: border-box;}
+        .login-container { max-width: 400px; margin: 100px auto; }
+    </style>
+</head>
+<body>
+
+    <div class="login-container">
+        <h1>管理者ログイン</h1>
+        <input type="email" id="email" placeholder="メールアドレス" required>
+        <input type="password" id="password" placeholder="パスワード" required>
+        <button id="login-btn">ログイン</button>
+    </div>
+
+    <!-- ====================================================== -->
+    <!-- ★★★ 重要なのはここからです ★★★ -->
+    <!-- 以下のスクリプトが、この順番で body の最後に置かれていることを確認してください -->
+    <!-- ====================================================== -->
+
+    <!-- 1. Firebaseの基本ライブラリ -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    
+    <!-- 2. 認証機能に必要なライブラリ -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+    
+    <!-- 3. 上記ライブラリを読み込んだ後に、設定ファイルを読み込む -->
+    <script src="firebase-config.js"></script>
+
+    <!-- 4. 最後に、このページ専用の処理を実行する -->
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const emailInput = document.getElementById('email');
+        const passwordInput = document.getElementById('password');
+        const loginBtn = document.getElementById('login-btn');
+
+        // この時点で、firebase-config.js が読み込まれているので `auth` 変数が使える
+        loginBtn.addEventListener('click', () => {
+            const email = emailInput.value;
+            const password = passwordInput.value;
+
+            auth.signInWithEmailAndPassword(email, password)
+                .then((userCredential) => {
+                    // ログイン成功
+                    window.location.href = 'admin.html';
+                })
+                .catch((error) => {
+                    console.error("ログインエラー:", error);
+                    alert('ログインに失敗しました。\nメールアドレスかパスワードが間違っています。');
+                });
+        });
+    });
+    </script>
+
+</body>
+</html>
