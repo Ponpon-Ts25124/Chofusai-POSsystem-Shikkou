@@ -28,10 +28,7 @@
         <h2>ログ</h2>
         <div class="logs-container" id="logs"></div>
     </div>
-
-    <!-- 印刷用の非表示iframe -->
     <iframe id="print-frame" style="display: none; width: 0; height: 0;"></iframe>
-
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
@@ -41,7 +38,7 @@
         const statusEl = document.getElementById('status');
         const logsEl = document.getElementById('logs');
         const printFrame = document.getElementById('print-frame');
-        let isPrinting = false; // 印刷中の多重実行を防ぐフラグ
+        let isPrinting = false;
 
         function log(message, type = 'info') {
             const entry = document.createElement('div');
@@ -49,10 +46,7 @@
             const timestamp = `[${new Date().toLocaleTimeString('ja-JP')}]`;
             entry.textContent = `${timestamp} ${message}`;
             logsEl.insertBefore(entry, logsEl.firstChild);
-            // ログが多すぎたら古いものを削除
-            if (logsEl.childElementCount > 100) {
-                logsEl.removeChild(logsEl.lastChild);
-            }
+            if (logsEl.childElementCount > 100) { logsEl.removeChild(logsEl.lastChild); }
         }
 
         function setStatus(message, type = 'waiting') {
@@ -70,11 +64,11 @@
                 try {
                     printFrame.contentWindow.focus();
                     printFrame.contentWindow.print();
-                    log('印刷ダイアログ（またはサイレント印刷）を呼び出しました。', 'success');
-                    callback(null); // 成功を通知
+                    log('印刷ダイアログを呼び出しました。', 'info');
+                    callback(null);
                 } catch (e) {
-                    log(`印刷呼び出しでエラーが発生: ${e.message}`, 'error');
-                    callback(e); // 失敗を通知
+                    log(`印刷呼び出しエラー: ${e.message}`, 'error');
+                    callback(e);
                 }
             }, 500);
         }
@@ -83,44 +77,39 @@
             log('印刷キューの監視を開始します...');
             db.collection("printQueue").orderBy("createdAt", "asc").limit(1)
                 .onSnapshot(snapshot => {
-                    if (isPrinting) {
-                        return; // 印刷中は何もしない
-                    }
-                    if (snapshot.empty) {
-                        setStatus('待機中', 'waiting');
-                        return;
-                    }
+                    if (isPrinting) { return; }
+                    if (snapshot.empty) { setStatus('待機中', 'waiting'); return; }
                     
-                    isPrinting = true; // 印刷処理を開始
+                    isPrinting = true;
                     const doc = snapshot.docs[0];
                     const printJob = doc.data();
 
                     setStatus(`印刷ジョブ #${printJob.orderNumber} を処理中...`, 'printing');
-                    log(`印刷ジョブ #${printJob.orderNumber} を受信しました。`);
+                    log(`印刷ジョブ #${printJob.orderNumber} を受信。`);
 
                     printReceipt(printJob.receiptHTML, (error) => {
                         if (error) {
-                            log(`ジョブ #${printJob.orderNumber} の印刷に失敗しました。ジョブは削除されません。`, 'error');
-                            isPrinting = false; // フラグをリセットして次の試行を可能にする
+                            log(`ジョブ #${printJob.orderNumber} 失敗。ジョブは削除されません。`, 'error');
+                            setTimeout(() => { isPrinting = false; }, 3000); // エラー後、3秒待ってから再試行可能にする
                             return;
                         }
-
-                        // 印刷が成功したら、ジョブをキューから削除
+                        
+                        // 印刷ダイアログが表示されている間にジョブを削除
                         doc.ref.delete().then(() => {
                             log(`ジョブ #${printJob.orderNumber} を正常に削除しました。`, 'success');
                         }).catch(deleteError => {
-                            log(`ジョブ #${printJob.orderNumber} の削除に失敗しました: ${deleteError}`, 'error');
+                            log(`ジョブ #${printJob.orderNumber} の削除に失敗: ${deleteError}`, 'error');
                         }).finally(() => {
-                            isPrinting = false; // 処理が完了したらフラグをリセット
+                            // 印刷が成功したと仮定し、3秒後に次のジョブを受け付けられるようにする
+                            setTimeout(() => { isPrinting = false; }, 3000);
                         });
                     });
                 }, error => {
-                    log(`監視中にFirestoreエラーが発生: ${error}`, 'error');
+                    log(`監視エラー: ${error}`, 'error');
                     setStatus(`監視エラー`, 'error');
                 });
         }
-
-        // 初期化
+        
         setStatus('初期化中...');
         startListening();
     });

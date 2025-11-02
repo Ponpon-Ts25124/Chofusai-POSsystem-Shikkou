@@ -1,0 +1,14 @@
+{
+  "name": "chofusai-pos-printer-app",
+  "version": "1.0.0",
+  "description": "POS Printer Host Application",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron ."
+  },
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "electron": "^39.0.0"
+  }
+}
