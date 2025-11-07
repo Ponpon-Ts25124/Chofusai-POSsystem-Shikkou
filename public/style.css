@@ -180,18 +180,18 @@ body {
 .waiting-container {
     display: flex;
     width: 100%;
-    height: 100%;
+    height: 96vh;
 }
 .waiting-section {
-    flex: 1;
+    flex: 2;
     padding: 20px;
     text-align: center;
 }
 .waiting-section h1 {
-    background-color: #007bff;
+    background-color: #ff0000;
     color: white;
     padding: 15px;
-    border-radius: 8px;
+    border-radius: 80px;
 }
 #waiting-list {
     display: flex;
@@ -206,23 +206,37 @@ body {
     padding: 20px 30px;
     border-radius: 5px;
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    
 }
 
 .calling-section {
-    border-left: 2px solid #ddd;
+    flex: 3;
+    padding: 20px;
+    text-align: center;
+    border-left: 5px solid #ddd;
 }
 .calling-section h1 {
-    background-color: #4CAF50;
+    background-color: #80cfff;
+    color: white;
+    padding: 15px;
+    border-radius: 80px;
 }
 #calling-list {
     display: flex;
     flex-wrap: wrap;
     justify-content: center;
-    gap: 20px;
+    gap: 40px;
     font-size: 4em;
     font-weight: bold;
     color: #d32f2f;
     animation: blink 1.5s linear infinite;
+}
+.calling-number {
+    background: #fff;
+    padding: 0.25em 0.5em;
+    border-radius: 5px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    
 }
 @keyframes blink {
     50% { opacity: 0.5; }
