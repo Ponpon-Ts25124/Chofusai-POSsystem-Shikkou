@@ -9,6 +9,28 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="POSレジ">
     <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="style.css">
+
+    <!-- ↓↓↓↓ waiting.html専用のスタイル調整 (ここから追加) ↓↓↓↓ -->
+    <style>
+        html, body {
+            overflow: hidden; /* ページ全体のスクロールを禁止 */
+        }
+        .waiting-container {
+            height: calc(100vh - 40px); /* bodyのpaddingを考慮 */
+        }
+        .waiting-section, .calling-section {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+        }
+        #waiting-list, #calling-list {
+            flex-grow: 1; /* 親要素の残りの高さいっぱいに広がる */
+            overflow: hidden; /* このエリアもスクロール禁止 */
+            align-content: flex-start; /* 上から詰めて配置 */
+        }
+    </style>
+    <!-- ↑↑↑↑ (ここまで追加) ↑↑↑↑ -->
 </head>
 <body>
     <div class="waiting-container">
@@ -28,12 +50,17 @@
 
     <script src="firebase-config.js"></script>
     <script>
+    document.addEventListener('DOMContentLoaded', function() {
         const waitingList = document.getElementById('waiting-list');
         const callingList = document.getElementById('calling-list');
 
-        // 直近3時間以内の注文を対象にする（古いデータが表示され続けないように）
-        const threeHoursAgo = new Date(Date.now() - 3 * 60 * 60 * 1000);
+        // ページ全体のスクロールを無効化する
+        document.body.addEventListener('touchmove', function(event) {
+            event.preventDefault();
+        }, { passive: false });
 
+        // 直近の注文を監視（ここは変更なし）
+        const threeHoursAgo = new Date(Date.now() - 3 * 60 * 60 * 1000);
         db.collection('orders')
           .where('createdAt', '>', firebase.firestore.Timestamp.fromDate(threeHoursAgo))
           .orderBy('createdAt', 'desc')
@@ -50,24 +77,56 @@
                   }
               });
               
-              // 番号順にソート
               waitingNumbers.sort((a, b) => a - b);
               callingNumbers.sort((a, b) => a - b);
 
-              renderNumbers(waitingList, waitingNumbers, 'waiting-number');
-              renderNumbers(callingList, callingNumbers, 'calling-number');
+              // 新しい描画関数を呼び出す
+              renderNumbersDynamically(waitingList, waitingNumbers, 'waiting-number');
+              renderNumbersDynamically(callingList, callingNumbers, 'calling-number');
           });
 
-        function renderNumbers(container, numbers, className) {
-            container.innerHTML = '';
-            // 最新5件まで表示
-            numbers.slice(-5).forEach(number => {
-                 const numberEl = document.createElement('div');
-                 numberEl.className = className;
-                 numberEl.textContent = number;
-                 container.appendChild(numberEl);
-            });
+        /**
+         * はみ出さないように動的に要素を追加する新しい描画関数
+         * @param {HTMLElement} container - 番号を追加する親要素 (例: waitingList)
+         * @param {number[]} numbers - 表示する番号の配列
+         * @param {string} className - 各番号に付けるCSSクラス名
+         */
+        function renderNumbersDynamically(container, numbers, className) {
+            container.innerHTML = ''; // コンテナをクリア
+            
+            // ループの外で一度だけスタイルを取得
+            const containerStyle = window.getComputedStyle(container);
+            const gap = parseInt(containerStyle.gap) || 15; // gapの値を取得
+
+            let currentHeight = 0; // 現在の行の高さを保持
+
+            for (const number of numbers) {
+                const numberEl = document.createElement('div');
+                numberEl.className = className;
+                numberEl.textContent = number;
+                
+                // 一時的にDOMに追加してサイズを計測
+                container.appendChild(numberEl);
+                
+                // 要素のオフセットと高さを取得
+                const elTop = numberEl.offsetTop;
+                const elHeight = numberEl.offsetHeight;
+
+                // 新しい行に移動したかを判定
+                if (elTop > currentHeight) {
+                    currentHeight = elTop;
+                }
+
+                // 次の要素を追加したら、親要素の高さを超えるかどうかを判定
+                // (現在の行の高さ + 要素の高さ + gap) > 親要素の高さ
+                if (currentHeight + elHeight + gap > container.clientHeight) {
+                    // はみ出る場合は、追加した要素を削除してループを終了
+                    container.removeChild(numberEl);
+                    break;
+                }
+            }
         }
+    });
     </script>
 </body>
 </html>

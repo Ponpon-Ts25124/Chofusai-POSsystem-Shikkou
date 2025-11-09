@@ -9,6 +9,23 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="POSレジ">
     <link rel="stylesheet" href="style.css">
+    <style>
+    .kds-grid {
+    /* レイアウトをGridに変更 */
+        display: grid;
+        /* 2つの均等な列を作成 */
+        grid-template-columns: repeat(4, 1fr);
+        /* はみ出した場合に縦スクロールを許可 */
+        overflow-y: auto;
+        /* 親要素の残りの高さいっぱいに広がる */
+        flex-grow: 1;
+        /* Flexboxのプロパティをリセット */
+        flex-wrap: nowrap;
+        align-content: flex-start; /* 上から詰めて配置 */
+        padding: 5px;
+        gap: 10px;
+    }
+    </style>
 </head>
 <body>
     <div class="kds-container">
@@ -25,40 +42,107 @@
 
     <script src="firebase-config.js"></script>
     <script>
+    document.addEventListener('DOMContentLoaded', function() {
         const ordersGrid = document.getElementById('orders-grid');
 
+        // --- 経過時間を更新するためのタイマー ---
+        // 1秒ごとに、表示されているすべての経過時間を更新する
+        setInterval(updateAllElapsedTimes, 1000);
+
+        // --- Firestoreの監視 ---
         db.collection('orders')
           .where('status', '==', 'processing')
           .orderBy('createdAt', 'asc')
           .onSnapshot(snapshot => {
-              ordersGrid.innerHTML = '';
-              snapshot.forEach(doc => {
-                  const order = doc.data();
-                  const orderCard = document.createElement('div');
-                  orderCard.className = 'order-card';
-                  
-                  let itemsHtml = '';
-                  order.items.forEach(item => {
-                      itemsHtml += `
-                          <div class="order-item">
-                              <span>${item.name}</span>
-                              <strong>x ${item.quantity}</strong>
-                          </div>
-                      `;
-                  });
+              // 変更があったドキュメントだけを効率的に更新する
+              snapshot.docChanges().forEach(change => {
+                  const doc = change.doc;
+                  const orderId = doc.id;
 
-                  orderCard.innerHTML = `
-                      <div class="order-header">
-                          <span>#${order.orderNumber}</span>
-                          <span>${new Date(order.createdAt?.toDate()).toLocaleTimeString('ja-JP')}</span>
-                      </div>
-                      <div class="order-items">
-                          ${itemsHtml}
-                      </div>
-                  `;
-                  ordersGrid.appendChild(orderCard);
+                  if (change.type === 'added') {
+                      // 新しい注文が追加された場合
+                      const orderCard = createOrderCard(doc.data(), orderId);
+                      ordersGrid.appendChild(orderCard);
+                  }
+                  if (change.type === 'modified') {
+                      // (将来的にステータス変更などがあった場合)
+                      const existingCard = document.getElementById(orderId);
+                      if (existingCard) {
+                          // ここでカードの内容を更新する処理
+                      }
+                  }
+                  if (change.type === 'removed') {
+                      // 注文が削除された（完了・取消された）場合
+                      const existingCard = document.getElementById(orderId);
+                      if (existingCard) {
+                          existingCard.remove();
+                      }
+                  }
               });
+              
+              // 最初の読み込み後、すぐに経過時間を更新
+              updateAllElapsedTimes();
           });
+
+        /**
+         * 注文カードのHTML要素を生成する関数
+         */
+        function createOrderCard(order, orderId) {
+            const orderCard = document.createElement('div');
+            orderCard.className = 'order-card';
+            orderCard.id = orderId; // ★カードを一意に識別するためのIDを設定
+
+            let itemsHtml = '';
+            order.items.forEach(item => {
+                itemsHtml += `
+                    <div class="order-item">
+                        <span>${item.name}</span>
+                        <strong>x ${item.quantity}</strong>
+                    </div>
+                `;
+            });
+
+            // ★注文時刻をHTMLのdata属性に保存
+            const createdAtTimestamp = order.createdAt?.toDate().getTime();
+
+            orderCard.innerHTML = `
+                <div class="order-header">
+                    <span>#${order.orderNumber}</span>
+                    <span class="elapsed-time" data-created-at="${createdAtTimestamp}">00:00</span>
+                </div>
+                <div class="order-items">
+                    ${itemsHtml}
+                </div>
+            `;
+            return orderCard;
+        }
+
+        /**
+         * 経過時間を計算して表示を更新する関数
+         */
+        function formatElapsedTime(startTime) {
+            const now = Date.now();
+            const diffSeconds = Math.floor((now - startTime) / 1000);
+            
+            const minutes = String(Math.floor(diffSeconds / 60)).padStart(2, '0');
+            const seconds = String(diffSeconds % 60).padStart(2, '0');
+
+            return `${minutes}:${seconds}`;
+        }
+        
+        /**
+         * ページ上のすべての経過時間表示を更新する関数
+         */
+        function updateAllElapsedTimes() {
+            const timeElements = document.querySelectorAll('.elapsed-time');
+            timeElements.forEach(el => {
+                const createdAt = parseInt(el.dataset.createdAt, 10);
+                if (!isNaN(createdAt)) {
+                    el.textContent = formatElapsedTime(createdAt);
+                }
+            });
+        }
+    });
     </script>
 </body>
 </html>

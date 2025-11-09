@@ -65,7 +65,7 @@
         db.collection('orders')
           .where('status', '==', 'completed')
           .orderBy('createdAt', 'desc') // 新しいものが上にくるように降順に変更
-          .limit(10) // 表示件数を10件に制限
+          //.limit(10) // 表示件数を10件に制限
           .onSnapshot(snapshot => {
               callingGrid.innerHTML = '';
               snapshot.forEach(doc => {
@@ -99,7 +99,7 @@
                 orderCard.style.borderColor = '#90caf9';
                 buttonsHtml = `
                     <div class="pickup-buttons">
-                        <button class="complete-btn" onclick="updateOrderStatus('${orderId}', 'completed')">完了 (呼び出し)</button>
+                        <button class="complete-btn" onclick="updateOrderStatus('${orderId}', 'completed')">呼出</button>
                         <button class="cancel-btn" onclick="updateOrderStatus('${orderId}', 'cancelled')">取消</button>
                     </div>
                 `;
@@ -107,7 +107,7 @@
                 orderCard.style.backgroundColor = '#e8f5e9';
                 orderCard.style.borderColor = '#a5d6a7';
                 buttonsHtml = `
-                    <button class="archive-btn" onclick="updateOrderStatus('${orderId}', 'archived')">受け渡し済み (非表示)</button>
+                    <button class="archive-btn" onclick="updateOrderStatus('${orderId}', 'archived')">受取済 (非表示)</button>
                 `;
             }
 

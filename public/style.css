@@ -9,8 +9,8 @@ body {
     display: flex;
     height: calc(100vh - 40px);
 }
-.left-pane { flex: 2; margin-right: 20px; }
-.right-pane { flex: 1; }
+.left-pane { flex: 5; margin-right: 20px; }
+.right-pane { flex: 2; }
 .full-pane { flex: 1; }
 
 /* タイル画面 */
@@ -127,7 +127,7 @@ body {
     z-index: 1000;
     left: 0; top: 0;
     width: 100%; height: 100%;
-    background-color: rgba(0,0,0,0.5);
+    background-color: rgba(0, 0, 0, 0.800);
     justify-content: center;
     align-items: center;
 }
@@ -142,7 +142,49 @@ body {
 .modal button { padding: 10px 20px; font-size: 1em; margin: 0 5px; cursor: pointer; }
 
 /* KDS, 受付, 待ち画面 */
-.kds-grid, .waiting-grid {
+html, body {
+    overflow: hidden; /* ページ全体のスクロールを禁止 */
+}
+.container {
+    height: calc(100vh - 40px);
+}
+.kds-container {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    width: 100%;
+}
+/* ★★★ ここからが今回の修正の核心 ★★★ */
+.kds-grid {
+/* レイアウトをGridに変更 */
+    display: grid;
+    /* 2つの均等な列を作成 */
+    grid-template-columns: repeat(2, 1fr);
+    /* はみ出した場合に縦スクロールを許可 */
+    overflow-y: auto;
+    /* 親要素の残りの高さいっぱいに広がる */
+    flex-grow: 1;
+    /* Flexboxのプロパティをリセット */
+    flex-wrap: nowrap;
+    align-content: flex-start; /* 上から詰めて配置 */
+    padding: 5px;
+    gap: 10px;
+}
+
+ .order-card {
+    width: auto;
+    aspect-ratio: 2 / 1; /* ★少し縦長の比率に変更 */
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 10px; /* ★内側の余白を少し詰める */
+    font-size: 0.8em; /* ★カード全体の文字を少し小さく */
+}
+.order-items {
+    flex-grow: 1;
+    overflow-y: auto;
+}
+.waiting-grid {
     display: flex;
     flex-wrap: wrap;
     gap: 20px;
@@ -153,7 +195,7 @@ body {
     border: 1px solid #fbc02d;
     border-radius: 8px;
     padding: 20px;
-    width: 300px;
+    width: 150px;
     flex-direction: column;
     align-items: stretch;
 }
@@ -172,10 +214,28 @@ body {
     font-size: 1.2em;
     margin-bottom: 5px;
 }
-.pickup-buttons { margin-top: 20px; display: flex; gap: 10px; }
-.pickup-buttons button { flex-grow: 1; padding: 12px; font-size: 1.1em; border-radius: 5px; border: none; cursor: pointer; color: white; }
-.complete-btn { background-color: #4CAF50; /* 緑 */ }
-.cancel-btn { background-color: #f44336; /* 赤 */ }
+/* ↓↓↓↓ この .pickup-buttons のスタイルを置き換えてください ↓↓↓↓ */
+.pickup-buttons {
+    margin-top: 10px;
+    display: flex; /* Gridレイアウトに変更 */
+    grid-template-columns: 2fr; /* 1列に設定 */
+    gap: 5px; /* ボタン間の隙間 */
+}
+.pickup-buttons button { 
+    flex-grow: 1; 
+    padding: 12px; 
+    font-size: 1.1em; 
+    border-radius: 5px; 
+    border: none; 
+    cursor: pointer; 
+    color: white; 
+}
+.complete-btn { 
+    background-color: #4CAF50; /* 緑 */ 
+}
+.cancel-btn { 
+    background-color: #f44336; /* 赤 */ 
+}
 
 .waiting-container {
     display: flex;
@@ -183,7 +243,7 @@ body {
     height: 96vh;
 }
 .waiting-section {
-    flex: 2;
+    flex: 42;
     padding: 20px;
     text-align: center;
 }
@@ -198,7 +258,7 @@ body {
     flex-wrap: wrap;
     justify-content: center;
     gap: 15px;
-    font-size: 2em;
+    font-size: 3em;
     font-weight: bold;
 }
 .waiting-number {
@@ -210,7 +270,7 @@ body {
 }
 
 .calling-section {
-    flex: 3;
+    flex: 58;
     padding: 20px;
     text-align: center;
     border-left: 5px solid #ddd;

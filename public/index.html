@@ -12,14 +12,14 @@
         html { position: fixed; width: 100%; height: 100%; }
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; margin: 0; padding: 20px; background-color: #f4f6f8; color: #333; height: 100vh; box-sizing: border-box; overflow: hidden; }
         .container { display: flex; height: 100%; }
-        .left-pane { flex: 2; margin-right: 20px; }
+        .left-pane { flex: 3; margin-right: 20px; }
         .right-pane { flex: 1; }
-        .products-grid { display: grid; grid-template-columns: 1fr 1fr; grid-auto-rows: calc((100% - 15px) / 2); gap: 15px; }
+        .products-grid { display: grid; grid-template-columns: 0.3fr 0.3fr 0.3fr; grid-auto-rows: 50%; gap: 15px; }
         .product-tile { background-color: #fff; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); cursor: pointer; transition: transform 0.1s; display: flex; flex-direction: column; align-items: center; justify-content: space-between; padding: 10px; }
         .product-tile:active { transform: scale(0.95); }
-        .product-tile img { width: 100%; height: 60%; object-fit: cover; border-radius: 4px; margin-bottom: 10px; }
+        .product-tile img { width: 100%; height: 100%; object-fit: cover; border-radius: 4px; margin-bottom: 10px; }
         .product-tile .product-name { font-size: 1.1em; font-weight: bold; text-align: center; }
-        .product-tile .product-price { font-size: 1em; color: #555; margin-top: 5px; }
+        .product-tile .product-price { font-size: 1em; color: #555; margin-top: 5px; text-align: center; }
         .cart-container { background-color: #fff; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); display: flex; flex-direction: column; height: 100%; }
         .cart-header { padding: 15px 20px; border-bottom: 1px solid #eee; font-size: 1.5em; font-weight: bold; position: relative; }
         .cart-items { flex-grow: 1; overflow-y: auto; padding: 10px; }
@@ -134,14 +134,10 @@
 
         async function printReceipt(orderDetails) {
             const createBlackBar = (number) => {
-                const numStr = String(number);
-                let bar = '';
-                for (let i = 0; i < numStr.length + 4; i++) {
-                    bar += '█';
-                }
+                const numStr = String(number); let bar = '';
+                for (let i = 0; i < numStr.length + 4; i++) { bar += '█'; }
                 return bar;
             };
-            
             let receiptHTML = `<!DOCTYPE html><html><head><style>
                     @page { margin: 0; size: 50mm auto; }
                     body { font-family: 'MS Gothic', monospace; margin: 0; padding: 0; color: #000; width: 50mm; font-size: 12pt; line-height: 1.4; }
@@ -160,40 +156,26 @@
                     .order-number-text { position: absolute; top: 0; left: 0; width: 100%; height: 100%; color: #fff; font-weight: bold; }
                 </style></head><body><div class="receipt-container">
                     <div class="center"><p class="shop-name">第75回調布祭<br>電気通信大学学友会<br>執行委員会</p></div>
-                    <hr><p class="center">${orderDetails.timestamp}</p><hr>
-            `;
-            
+                    <hr><p class="center">${orderDetails.timestamp}</p><hr>`;
             orderDetails.items.forEach(item => {
-                const subtotal = item.price * item.quantity;
-                receiptHTML += `<p class="item-name">${item.name}</p><div class="row item-details"><span class="left">  ${item.price} x ${item.quantity}</span><span class="right">¥${subtotal.toLocaleString()}</span></div>`;
+                const subtotal = item.quantity * item.price;
+                receiptHTML += `<p class="item-name">${item.name}</p><div class="row item-details"><span class="left">  ${item.quantity} x ${item.price}</span><span class="right">¥${subtotal.toLocaleString()}</span></div>`;
             });
             receiptHTML += `<hr>`;
-
             receiptHTML += `<div class="row"><span class="left">小計</span><span class="right">¥${orderDetails.originalTotal.toLocaleString()}</span></div>`;
-            
             if(orderDetails.appliedDiscounts && orderDetails.appliedDiscounts.length > 0) {
                 orderDetails.appliedDiscounts.forEach(discount => {
                     receiptHTML += `<div class="row"><span class="left">${discount.dealName}</span><span class="right">- ¥${discount.amount.toLocaleString()}</span></div>`;
                 });
             }
             receiptHTML += `<hr>`;
-            
             receiptHTML += `
                 <div class="row"><strong><span class="left">合計</span></strong><strong><span class="right">¥${orderDetails.totalAmount.toLocaleString()}</span></strong></div>
                 <div class="row"><span class="left">お預かり</span><span class="right">¥${orderDetails.deposit.toLocaleString()}</span></div>
                 <div class="row"><span class="left">お釣り</span><span class="right">¥${orderDetails.change.toLocaleString()}</span></div>
-                <div class="center" style="font-size: 3em; font-weight: bold; margin-top: 5mm;">
-                    <p star:inverse="true">&nbsp;${orderDetails.orderNumber}&nbsp;</p>
-                </div>            `;
+                <div class="center"><div class="order-number-wrapper"><div class="order-number-bg">${createBlackBar(orderDetails.orderNumber)}</div><div class="order-number-text">${orderDetails.orderNumber}</div></div></div>`;
             receiptHTML += `</div></body></html>`;
-
-            try {
-                await db.collection("printQueue").add({
-                    receiptHTML: receiptHTML,
-                    orderNumber: orderDetails.orderNumber,
-                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
-                });
-            } catch (error) { console.error("印刷ジョブの追加に失敗:", error); alert("エラー: 印刷ジョブを送信できませんでした。"); }
+            try { await db.collection("printQueue").add({ receiptHTML: receiptHTML, orderNumber: orderDetails.orderNumber, createdAt: firebase.firestore.FieldValue.serverTimestamp() }); } catch (error) { console.error("印刷ジョブの追加に失敗:", error); alert("エラー: 印刷ジョブを送信できませんでした。"); }
         }
         
         function applyBundleDiscounts(currentCart) { let originalTotal = 0, finalTotal = 0, discountAmount = 0; const appliedDiscounts = []; const cartItemsFlat = []; for (const productId in currentCart) { const product = products.find(p => p.id === productId); if (product) { originalTotal += (product.price - (product.discount || 0)) * currentCart[productId]; for (let i = 0; i < currentCart[productId]; i++) cartItemsFlat.push(productId); } } for (const deal of bundleDeals) { const eligibleItems = cartItemsFlat.filter(id => deal.eligibleProductIds.includes(id)); while (eligibleItems.length >= deal.requiredCount) { finalTotal += deal.bundlePrice; const representativePrice = products.find(p => p.id === eligibleItems[0])?.price || 0; const discountValue = (deal.requiredCount * representativePrice) - deal.bundlePrice; appliedDiscounts.push({ dealName: deal.dealName, amount: discountValue }); let itemsToRemove = deal.requiredCount; for (let i = cartItemsFlat.length - 1; i >= 0; i--) { if (itemsToRemove > 0 && deal.eligibleProductIds.includes(cartItemsFlat[i])) { const indexInEligible = eligibleItems.indexOf(cartItemsFlat[i]); if (indexInEligible > -1) eligibleItems.splice(indexInEligible, 1); cartItemsFlat.splice(i, 1); itemsToRemove--; } } } } cartItemsFlat.forEach(productId => { const product = products.find(p => p.id === productId); if (product) finalTotal += (product.price - (product.discount || 0)); }); discountAmount = originalTotal - finalTotal; return { finalTotal, discountAmount, originalTotal, appliedDiscounts }; }
@@ -205,15 +187,59 @@
         function removeFromCart(productId) { delete cart[productId]; updateFirestoreCart(); }
         function updateFirestoreCart() { cartDocRef.set({ items: cart }); }
         function updatePaymentView() { cashPaymentArea.style.display = selectedPaymentMethod === 'cash' ? 'block' : 'none'; const depositValue = parseInt(depositAmount) || 0; depositDisplay.textContent = `¥${depositValue.toLocaleString()}`; const total = calculateTotal(); const change = depositValue - total; changeAmountEl.textContent = `¥${change >= 0 ? change.toLocaleString() : '---'}`; }
-        checkoutBtn.onclick = () => { depositAmount = ''; selectedPaymentMethod = 'cash'; updatePaymentView(); db.collection('paymentInstructions').doc('main_customer_display').set({ show: false }); modal.style.display = 'flex'; modalTotalEl.textContent = `¥${calculateTotal().toLocaleString()}`; };
-        closeModalBtn.onclick = async () => { await db.collection('paymentInstructions').doc('main_customer_display').set({ show: false }); modal.style.display = 'none'; };
-        paymentBtns.forEach(btn => { btn.addEventListener('click', async () => { paymentBtns.forEach(b => b.classList.remove('active')); btn.classList.add('active'); selectedPaymentMethod = btn.dataset.method; if (selectedPaymentMethod === 'paypay') { const paypayInstruction = { show: true, amount: calculateTotal(), qrImagePath: 'images/paypay_qr.png' }; await db.collection('paymentInstructions').doc('main_customer_display').set(paypayInstruction); } else { await db.collection('paymentInstructions').doc('main_customer_display').set({ show: false }); } updatePaymentView(); }); });
-        keypadBtns.forEach(btn => { btn.addEventListener('click', () => { const key = btn.dataset.key; if (key === 'C') { depositAmount = ''; } else { depositAmount += key; } updatePaymentView(); }); });
         
-        confirmPaymentBtn.onclick = async () => { const { finalTotal, originalTotal, appliedDiscounts } = applyBundleDiscounts(cart); const total = finalTotal; const deposit = parseInt(depositAmount) || 0; if (selectedPaymentMethod === 'cash' && deposit < total) { alert('お預かり金額が不足しています。'); return; } const settingsRef = db.collection('settings').doc('config'); try { const newOrderNumber = await db.runTransaction(async (transaction) => { const settingsDoc = await transaction.get(settingsRef); const newNumber = (settingsDoc.data().lastOrderNumber || 0) + 1; transaction.update(settingsRef, { lastOrderNumber: newNumber }); return newNumber; }); const orderItems = Object.keys(cart).map(productId => { const product = products.find(p => p.id === productId); return { productId, name: product.name, price: product.price, cost: product.cost, discount: product.discount || 0, quantity: cart[productId] }; }); await db.collection('orders').add({ orderNumber: newOrderNumber, items: orderItems, originalTotal: originalTotal, appliedDiscounts: appliedDiscounts, totalAmount: total, deposit: selectedPaymentMethod === 'cash' ? deposit : total, change: selectedPaymentMethod === 'cash' ? deposit - total : 0, paymentMethod: selectedPaymentMethod, status: 'processing', createdAt: firebase.firestore.FieldValue.serverTimestamp() }); if (selectedPaymentMethod === 'cash') { const receiptDetails = { orderNumber: newOrderNumber, items: orderItems, originalTotal: originalTotal, appliedDiscounts: appliedDiscounts, totalAmount: total, deposit: deposit, change: deposit - total, timestamp: new Date().toLocaleString('ja-JP', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'Asia/Tokyo' }) }; await printReceipt(receiptDetails); } if (selectedPaymentMethod === 'paypay') { await db.collection('paymentInstructions').doc('main_customer_display').set({ show: false }); } await cartDocRef.set({ items: {} }); modal.style.display = 'none'; } catch (e) { console.error("取引に失敗しました:", e); alert("会計処理に失敗しました。"); if (selectedPaymentMethod === 'paypay') { await db.collection('paymentInstructions').doc('main_customer_display').set({ show: false }); } } };
+        checkoutBtn.onclick = () => {
+            depositAmount = ''; selectedPaymentMethod = 'cash'; updatePaymentView();
+            db.collection('paymentInstructions').doc('main_customer_display').set({ show: false });
+            modal.style.display = 'flex';
+            modalTotalEl.textContent = `¥${calculateTotal().toLocaleString()}`;
+        };
+        closeModalBtn.onclick = async () => {
+            await db.collection('paymentInstructions').doc('main_customer_display').set({ show: false });
+            modal.style.display = 'none';
+        };
+
+        paymentBtns.forEach(btn => {
+            btn.addEventListener('click', async () => {
+                paymentBtns.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                selectedPaymentMethod = btn.dataset.method;
+                if (selectedPaymentMethod === 'paypay') {
+                    const paypayInstruction = {
+                        show: true,
+                        amount: calculateTotal()
+                    };
+                    await db.collection('paymentInstructions').doc('main_customer_display').set(paypayInstruction);
+                } else {
+                    await db.collection('paymentInstructions').doc('main_customer_display').set({ show: false });
+                }
+                updatePaymentView();
+            });
+        });
+
+        keypadBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                const key = btn.dataset.key;
+                if (key === 'C') { depositAmount = ''; } else { depositAmount += key; }
+                updatePaymentView();
+            });
+        });
         
-        secretMenuTrigger.addEventListener('click', () => { tapCount++; clearTimeout(tapTimer); if (tapCount >= 5) { navModal.style.display = 'flex'; tapCount = 0; } else { tapTimer = setTimeout(() => { tapCount = 0; }, 1500); } });
-        closeNavModalBtn.addEventListener('click', () => { navModal.style.display = 'none'; });
+        confirmPaymentBtn.onclick = async () => { const { finalTotal, originalTotal, appliedDiscounts } = applyBundleDiscounts(cart); const total = finalTotal; const deposit = parseInt(depositAmount) || 0; if (selectedPaymentMethod === 'cash' && deposit < total) { alert('お預かり金額が不足しています。'); return; } const settingsRef = db.collection('settings').doc('config'); try { const newOrderNumber = await db.runTransaction(async (transaction) => { const settingsDoc = await transaction.get(settingsRef); const newNumber = (settingsDoc.data().lastOrderNumber || 100) + 1; transaction.update(settingsRef, { lastOrderNumber: newNumber }); return newNumber; }); const orderItems = Object.keys(cart).map(productId => { const product = products.find(p => p.id === productId); return { productId, name: product.name, price: product.price, cost: product.cost, discount: product.discount || 0, quantity: cart[productId] }; }); await db.collection('orders').add({ orderNumber: newOrderNumber, items: orderItems, originalTotal: originalTotal, appliedDiscounts: appliedDiscounts, totalAmount: total, deposit: selectedPaymentMethod === 'cash' ? deposit : total, change: selectedPaymentMethod === 'cash' ? deposit - total : 0, paymentMethod: selectedPaymentMethod, status: 'processing', createdAt: firebase.firestore.FieldValue.serverTimestamp() }); if (selectedPaymentMethod === 'cash') { const receiptDetails = { orderNumber: newOrderNumber, items: orderItems, originalTotal: originalTotal, appliedDiscounts: appliedDiscounts, totalAmount: total, deposit: deposit, change: deposit - total, timestamp: new Date().toLocaleString('ja-JP', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'Asia/Tokyo' }) }; await printReceipt(receiptDetails); } if (selectedPaymentMethod === 'paypay') { await db.collection('paymentInstructions').doc('main_customer_display').set({ show: false }); } await cartDocRef.set({ items: {} }); modal.style.display = 'none'; } catch (e) { console.error("取引に失敗しました:", e); alert("会計処理に失敗しました。"); if (selectedPaymentMethod === 'paypay') { await db.collection('paymentInstructions').doc('main_customer_display').set({ show: false }); } } };
+        
+        secretMenuTrigger.addEventListener('click', () => {
+            tapCount++; clearTimeout(tapTimer);
+            if (tapCount >= 5) {
+                navModal.style.display = 'flex';
+                tapCount = 0;
+            } else {
+                tapTimer = setTimeout(() => { tapCount = 0; }, 1500);
+            }
+        });
+        
+        closeNavModalBtn.addEventListener('click', () => {
+            navModal.style.display = 'none';
+        });
     });
     </script>
 </body>

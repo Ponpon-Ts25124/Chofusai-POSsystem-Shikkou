@@ -1,182 +1,176 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-<meta charset="UTF-8">
+    <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>POSレジ - お客様画面</title>
+    <title>POSレジ - お客様画面</title>
     <link rel="manifest" href="/manifest.json">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="POSレジ">
-<link rel="stylesheet" href="style.css">
-<style>
-.menu-image { width: 100%; height: 100%; object-fit: cover; border-radius: 8px; }
-.customer-cart-item { display: flex; font-size: 1.5em; margin-bottom: 15px; }
-.customer-cart-item .name { flex-grow: 1; }
-.customer-cart-item .qty { width: 100px; text-align: right; }
-.customer-cart-item .subtotal { width: 150px; text-align: right; font-weight: bold; }
-</style>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+    <style>
+        html, body { overflow: hidden; }
+        .menu-image { width: 100%; height: 100%; object-fit: cover; border-radius: 8px; }
+        .customer-cart-item { display: flex; font-size: 1.5em; margin-bottom: 15px; }
+        .customer-cart-item .name { flex-grow: 1; }
+        .customer-cart-item .qty { width: 100px; text-align: right; }
+        .customer-cart-item .subtotal { width: 150px; text-align: right; font-weight: bold; }
+        #qrcode { display: inline-block; margin: 20px 0; background-color: #fff; padding: 15px; border-radius: 8px; }
+        #qrcode img { display: block; margin: auto; }
+    </style>
 </head>
 <body>
-<div class="container">
-    <div class="left-pane">
-        <img src="images/menu.jpg" alt="お品書き" class="menu-image">
-    </div>
-    <div class="right-pane">
-        <div class="cart-container">
-            <div class="cart-header">ご注文内容</div>
-            <div class="cart-items" id="cart-items"></div>
-            <div class="cart-footer">
-                <div class="total-row" style="font-size: 2.5em;">
-                    <span>合計</span>
-                    <span id="total-amount">¥0</span>
+    <div class="container">
+        <div class="left-pane"><img src="images/menu.jpg" alt="お品書き" class="menu-image"></div>
+        <div class="right-pane">
+            <div class="cart-container">
+                <div class="cart-header">ご注文内容</div>
+                <div class="cart-items" id="cart-items"></div>
+                <div class="cart-footer">
+                    <div class="total-row" style="font-size: 2.5em;">
+                        <span>合計</span><span id="total-amount">¥0</span>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
-</div>
 
-<div id="paypay-modal" class="modal">
-    <div class="modal-content" style="text-align: center;">
-        <h2>PayPayでお支払い</h2>
-        <p>合計金額: <strong id="paypay-total">¥0</strong></p>
-        <img id="paypay-qr-image" src="" alt="PayPay QR Code" style="max-width: 80%; margin: 20px 0;">
-        <p>この画面を店員にお見せください</p>
+    <div id="paypay-modal" class="modal">
+        <div class="modal-content" style="text-align: center;">
+            <h2>PayPayでお支払い</h2>
+            <p>合計金額: <strong id="paypay-total">¥0</strong></p>
+            <div id="qrcode"></div>
+            <p>支払い後、画面を店員にお見せください</p>
+        </div>
     </div>
-</div>
 
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
-<script src="firebase-config.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+    <script src="firebase-config.js"></script>
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        document.body.addEventListener('touchmove', function(event) { event.preventDefault(); }, { passive: false });
+        
+        const cartItemsContainer = document.getElementById('cart-items');
+        const totalAmountEl = document.getElementById('total-amount');
+        const paypayModal = document.getElementById('paypay-modal');
+        const paypayTotalEl = document.getElementById('paypay-total');
+        const qrcodeContainer = document.getElementById('qrcode');
+        let qrcode = null;
 
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    // --- 1. HTML要素の取得 ---
-    const cartItemsContainer = document.getElementById('cart-items');
-    const totalAmountEl = document.getElementById('total-amount');
-    const paypayModal = document.getElementById('paypay-modal');
-    const paypayTotalEl = document.getElementById('paypay-total');
-    const paypayQrImage = document.getElementById('paypay-qr-image');
+        let products = [], bundleDeals = [];
 
-    // --- 2. グローバル変数の定義 ---
-    let products = [];
-    let bundleDeals = [];
-
-    // --- 3. メイン処理：商品と割引ルールを両方読み込む ---
-    async function initialize() {
-        try {
-            const productsPromise = db.collection('products').orderBy('sortOrder').get();
-            const dealsPromise = db.collection('bundleDeals').where('isActive', '==', true).orderBy('priority', 'desc').get();
-            
-            const [productsSnapshot, dealsSnapshot] = await Promise.all([productsPromise, dealsPromise]);
-
-            products = productsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            bundleDeals = dealsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            
-            // データ読み込み後にカートの監視を開始
-            subscribeToCart();
-        } catch (error) {
-            console.error("お客様画面: 初期データの読み込みに失敗:", error);
-            cartItemsContainer.innerHTML = '<p>エラー: データの読み込みに失敗しました。</p>';
-        }
-    }
-
-    // --- 4. 割引計算ロジック ---
-    function applyBundleDiscounts(currentCart) {
-        let originalTotal = 0;
-        let finalTotal = 0;
-        let discountAmount = 0;
-        const cartItemsFlat = [];
-        for (const productId in currentCart) {
-            const product = products.find(p => p.id === productId);
-            if (product) {
-                originalTotal += (product.price - (product.discount || 0)) * currentCart[productId];
-                for (let i = 0; i < currentCart[productId]; i++) {
-                    cartItemsFlat.push(productId);
-                }
+        async function initialize() {
+            try {
+                const productsPromise = db.collection('products').orderBy('sortOrder').get();
+                const dealsPromise = db.collection('bundleDeals').where('isActive', '==', true).orderBy('priority', 'desc').get();
+                const [productsSnapshot, dealsSnapshot] = await Promise.all([productsPromise, dealsPromise]);
+                products = productsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                bundleDeals = dealsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                subscribeToCart();
+            } catch (error) {
+                console.error("お客様画面: 初期データの読み込みに失敗:", error);
+                cartItemsContainer.innerHTML = '<p>エラー: データの読み込みに失敗しました。</p>';
             }
         }
-        for (const deal of bundleDeals) {
-            const eligibleItems = cartItemsFlat.filter(id => deal.eligibleProductIds.includes(id));
-            while (eligibleItems.length >= deal.requiredCount) {
-                finalTotal += deal.bundlePrice;
-                let itemsToRemove = deal.requiredCount;
-                for (let i = cartItemsFlat.length - 1; i >= 0; i--) {
-                    if (itemsToRemove > 0 && deal.eligibleProductIds.includes(cartItemsFlat[i])) {
-                        const indexInEligible = eligibleItems.indexOf(cartItemsFlat[i]);
-                        if (indexInEligible > -1) eligibleItems.splice(indexInEligible, 1);
-                        cartItemsFlat.splice(i, 1);
-                        itemsToRemove--;
+
+        function applyBundleDiscounts(currentCart) {
+            let originalTotal = 0, finalTotal = 0, discountAmount = 0;
+            const cartItemsFlat = [];
+            for (const productId in currentCart) {
+                const product = products.find(p => p.id === productId);
+                if (product) {
+                    originalTotal += (product.price - (product.discount || 0)) * currentCart[productId];
+                    for (let i = 0; i < currentCart[productId]; i++) cartItemsFlat.push(productId);
+                }
+            }
+            for (const deal of bundleDeals) {
+                const eligibleItems = cartItemsFlat.filter(id => deal.eligibleProductIds.includes(id));
+                while (eligibleItems.length >= deal.requiredCount) {
+                    finalTotal += deal.bundlePrice;
+                    let itemsToRemove = deal.requiredCount;
+                    for (let i = cartItemsFlat.length - 1; i >= 0; i--) {
+                        if (itemsToRemove > 0 && deal.eligibleProductIds.includes(cartItemsFlat[i])) {
+                            const indexInEligible = eligibleItems.indexOf(cartItemsFlat[i]);
+                            if (indexInEligible > -1) eligibleItems.splice(indexInEligible, 1);
+                            cartItemsFlat.splice(i, 1);
+                            itemsToRemove--;
+                        }
                     }
                 }
             }
+            cartItemsFlat.forEach(productId => {
+                const product = products.find(p => p.id === productId);
+                if (product) finalTotal += (product.price - (product.discount || 0));
+            });
+            discountAmount = originalTotal - finalTotal;
+            return { finalTotal, discountAmount };
         }
-        cartItemsFlat.forEach(productId => {
-            const product = products.find(p => p.id === productId);
-            if (product) finalTotal += (product.price - (product.discount || 0));
-        });
-        discountAmount = originalTotal - finalTotal;
-        return { finalTotal, discountAmount };
-    }
 
-    // --- 5. カート監視と描画 ---
-    function subscribeToCart() {
-        db.collection('currentOrder').doc('main_register')
-            .onSnapshot(doc => {
+        function subscribeToCart() {
+            db.collection('currentOrder').doc('main_register').onSnapshot(doc => {
                 const cart = doc.data()?.items || {};
                 renderCustomerCart(cart);
             });
-    }
-    
-    function renderCustomerCart(cart) {
-        cartItemsContainer.innerHTML = '';
-        
-        if (Object.keys(cart).length === 0) {
-            cartItemsContainer.innerHTML = '<p style="text-align: center; color: #888; padding: 20px;">ご注文をお待ちしております。</p>';
-            totalAmountEl.textContent = '¥0';
-            return;
         }
 
-        const { finalTotal, discountAmount } = applyBundleDiscounts(cart);
-
-        Object.keys(cart).forEach(productId => {
-            const product = products.find(p => p.id === productId);
-            if (!product) return;
-            const quantity = cart[productId];
-            const subtotal = (product.price - (product.discount || 0)) * quantity;
-            const itemEl = document.createElement('div');
-            itemEl.className = 'customer-cart-item';
-            itemEl.innerHTML = `<span class="name">${product.name}</span><span class="qty">${quantity} 点</span><span class="subtotal">¥${subtotal.toLocaleString()}</span>`;
-            cartItemsContainer.appendChild(itemEl);
-        });
-        
-        if (discountAmount > 0) {
-            const discountEl = document.createElement('div');
-            discountEl.className = 'customer-cart-item';
-            discountEl.innerHTML = `<span class="name" style="color: #dc3545; font-weight: bold;">セット割引</span><span class="subtotal" style="color: #dc3545;">- ¥${discountAmount.toLocaleString()}</span>`;
-            cartItemsContainer.appendChild(discountEl);
+        function renderCustomerCart(cart) {
+            cartItemsContainer.innerHTML = '';
+            if (Object.keys(cart).length === 0) {
+                cartItemsContainer.innerHTML = '<p style="text-align: center; color: #888; padding: 20px;">ご注文をお待ちしております。</p>';
+                totalAmountEl.textContent = '¥0';
+                return;
+            }
+            const { finalTotal, discountAmount } = applyBundleDiscounts(cart);
+            Object.keys(cart).forEach(productId => {
+                const product = products.find(p => p.id === productId);
+                if (!product) return;
+                const quantity = cart[productId];
+                const subtotal = (product.price - (product.discount || 0)) * quantity;
+                const itemEl = document.createElement('div');
+                itemEl.className = 'customer-cart-item';
+                itemEl.innerHTML = `<span class="name">${product.name}</span><span class="qty">${quantity} 点</span><span class="subtotal">¥${subtotal.toLocaleString()}</span>`;
+                cartItemsContainer.appendChild(itemEl);
+            });
+            if (discountAmount > 0) {
+                const discountEl = document.createElement('div');
+                discountEl.className = 'customer-cart-item';
+                discountEl.innerHTML = `<span class="name" style="color: #dc3545; font-weight: bold;">セット割引</span><span class="subtotal" style="color: #dc3545;">- ¥${discountAmount.toLocaleString()}</span>`;
+                cartItemsContainer.appendChild(discountEl);
+            }
+            totalAmountEl.textContent = `¥${finalTotal.toLocaleString()}`;
         }
 
-        totalAmountEl.textContent = `¥${finalTotal.toLocaleString()}`;
-    }
-
-    // --- 6. PayPayモーダル表示ロジック ---
-    db.collection('paymentInstructions').doc('main_customer_display')
-        .onSnapshot(doc => {
+        db.collection('paymentInstructions').doc('main_customer_display').onSnapshot(doc => {
             const instruction = doc.data();
             if (instruction && instruction.show) {
-                paypayTotalEl.textContent = `¥${instruction.amount.toLocaleString()}`;
-                paypayQrImage.src = instruction.qrImagePath;
+                const amount = instruction.amount;
+                const paymentUrl = `https://chofusai2025.moservice.net/pay/7?amount=${amount}`;
+                paypayTotalEl.textContent = `¥${amount.toLocaleString()}`;
+                qrcodeContainer.innerHTML = '';
+                qrcode = new QRCode(qrcodeContainer, {
+                    text: paymentUrl,
+                    width: 256,
+                    height: 256,
+                    colorDark : "#000000",
+                    colorLight : "#ffffff",
+                    correctLevel : QRCode.CorrectLevel.H
+                });
                 paypayModal.style.display = 'flex';
             } else {
                 paypayModal.style.display = 'none';
+                if (qrcode) {
+                    qrcode.clear();
+                    qrcodeContainer.innerHTML = '';
+                }
             }
         });
 
-    // --- 7. 初期化関数の実行 ---
-    initialize();
-});
-</script>
+        initialize();
+    });
+    </script>
 </body>
 </html>
