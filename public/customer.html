@@ -12,9 +12,8 @@
     <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
     <style>
         html, body { overflow: hidden; }
-        .menu-image { width: 100%; height: 100%; object-fit: cover; border-radius: 8px; }
-        .customer-cart-item { display: flex; font-size: 1.5em; margin-bottom: 15px; background-color: #fff; transition: background-color 0.3s; padding: 10px; border-radius: 5px; }
-        .customer-cart-item.discounted { background-color: #e7f3ff; }
+        .menu-image { width: 100%; height: 100%; object-fit: scale-down; border-radius: 8px; }
+        .customer-cart-item { display: flex; font-size: 1.5em; margin-bottom: 15px; }
         .customer-cart-item .name { flex-grow: 1; }
         .customer-cart-item .qty { width: 100px; text-align: right; }
         .customer-cart-item .subtotal { width: 150px; text-align: right; font-weight: bold; }
@@ -39,12 +38,13 @@
     </div>
     <div id="paypay-modal" class="modal">
         <div class="modal-content" style="text-align: center;">
-            <h2>キャッシュレス決済</h2>
+            <h2>PayPayでお支払い</h2>
             <p>合計金額: <strong id="paypay-total">¥0</strong></p>
             <div id="qrcode"></div>
             <p>支払い後、画面を店員にお見せください</p>
         </div>
     </div>
+
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
@@ -59,48 +59,61 @@
         const paypayTotalEl = document.getElementById('paypay-total');
         const qrcodeContainer = document.getElementById('qrcode');
         let qrcode = null;
-        let products = [], bundleDeals = [];
 
-        const cartDocRef = db.collection('currentOrder').doc('main_register');
+        let products = [], bundleDeals = [], currentCart = {};
 
-        async function initialize() {
-            try {
-                const productsPromise = db.collection('products').orderBy('sortOrder').get();
-                const dealsPromise = db.collection('bundleDeals').where('isActive', '==', true).orderBy('priority', 'desc').get();
-                const [productsSnapshot, dealsSnapshot] = await Promise.all([productsPromise, dealsPromise]);
-                products = productsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                bundleDeals = dealsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                // リアルタイムリスナーを初期データ取得後に設定
-                cartDocRef.onSnapshot(doc => {
-                    const cart = doc.data()?.items || {};
-                    renderCustomerCart(cart);
-                });
-            } catch (error) { console.error("お客様画面: 初期データの読み込みに失敗:", error); }
-        }
+        // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
+        // ★★★ ここからがリアルタイム更新のロジックです ★★★
+        // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
 
-        function applyBundleDiscounts(currentCart) {
+        // 1. 商品リストをリアルタイムで監視
+        db.collection('products').orderBy('sortOrder').onSnapshot(snapshot => {
+            products = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            // 商品リストが更新されたら、現在のカート内容で再描画
+            renderCustomerCart(currentCart); 
+        }, error => {
+            console.error("商品リストの監視エラー:", error);
+        });
+
+        // 2. 割引ルールをリアルタイムで監視
+        db.collection('bundleDeals').where('isActive', '==', true).orderBy('priority', 'desc').onSnapshot(snapshot => {
+            bundleDeals = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            // 割引ルールが更新されたら、現在のカート内容で再描画
+            renderCustomerCart(currentCart);
+        }, error => {
+            console.error("割引ルールの監視エラー:", error);
+        });
+
+        // 3. カートの中身をリアルタイムで監視
+        db.collection('currentOrder').doc('main_register').onSnapshot(doc => {
+            currentCart = doc.data()?.items || {};
+            // カートの中身が更新されたら再描画
+            renderCustomerCart(currentCart);
+        }, error => {
+            console.error("カートの監視エラー:", error);
+        });
+
+        // ★★★★★★★★★★★★★★★★★★★★
+        // ★★★ 監視ロジックはここまで ★★★
+        // ★★★★★★★★★★★★★★★★★★★★
+
+        function applyBundleDiscounts(cart) {
             let originalTotal = 0, finalTotal = 0, discountAmount = 0;
-            const appliedDiscounts = [];
-            const discountedProductIds = new Set();
             const cartItemsFlat = [];
-            for (const productId in currentCart) {
+            for (const productId in cart) {
                 const product = products.find(p => p.id === productId);
                 if (product) {
-                    originalTotal += (product.price - (product.discount || 0)) * currentCart[productId];
-                    for (let i = 0; i < currentCart[productId]; i++) cartItemsFlat.push(productId);
+                    originalTotal += (product.price - (product.discount || 0)) * cart[productId];
+                    for (let i = 0; i < cart[productId]; i++) cartItemsFlat.push(productId);
                 }
             }
             for (const deal of bundleDeals) {
                 const eligibleItems = cartItemsFlat.filter(id => deal.eligibleProductIds.includes(id));
                 while (eligibleItems.length >= deal.requiredCount) {
                     finalTotal += deal.bundlePrice;
-                    const representativePrice = products.find(p => p.id === eligibleItems[0])?.price || 0;
-                    const discountValue = (deal.requiredCount * representativePrice) - deal.bundlePrice;
-                    appliedDiscounts.push({ dealName: deal.dealName, amount: discountValue });
                     let itemsToRemove = deal.requiredCount;
                     for (let i = cartItemsFlat.length - 1; i >= 0; i--) {
                         if (itemsToRemove > 0 && deal.eligibleProductIds.includes(cartItemsFlat[i])) {
-                            discountedProductIds.add(cartItemsFlat[i]);
                             const indexInEligible = eligibleItems.indexOf(cartItemsFlat[i]);
                             if (indexInEligible > -1) eligibleItems.splice(indexInEligible, 1);
                             cartItemsFlat.splice(i, 1);
@@ -114,45 +127,62 @@
                 if (product) finalTotal += (product.price - (product.discount || 0));
             });
             discountAmount = originalTotal - finalTotal;
-            return { finalTotal, discountAmount, originalTotal, appliedDiscounts, discountedProductIds };
+            return { finalTotal, discountAmount };
         }
         
         function renderCustomerCart(cart) {
             cartItemsContainer.innerHTML = '';
+            if (products.length === 0) return; // 商品データがまだ読み込まれていない場合は何もしない
+
             if (Object.keys(cart).length === 0) {
                 cartItemsContainer.innerHTML = '<p style="text-align: center; color: #888; padding: 20px;">ご注文をお待ちしております。</p>';
                 totalAmountEl.textContent = '¥0';
                 return;
             }
-            const { finalTotal, discountAmount, appliedDiscounts } = applyBundleDiscounts(cart);
-            const { discountedProductIds } = applyBundleDiscounts(cart); // 割引対象IDを取得
-
+            const { finalTotal, discountAmount } = applyBundleDiscounts(cart);
             Object.keys(cart).forEach(productId => {
-                const product = products.find(p => p.id === productId); if (!product) return;
+                const product = products.find(p => p.id === productId);
+                if (!product) return;
                 const quantity = cart[productId];
                 const subtotal = (product.price - (product.discount || 0)) * quantity;
                 const itemEl = document.createElement('div');
                 itemEl.className = 'customer-cart-item';
-                if (discountedProductIds.has(productId)) {
-                    itemEl.classList.add('discounted');
-                }
                 itemEl.innerHTML = `<span class="name">${product.name}</span><span class="qty">${quantity} 点</span><span class="subtotal">¥${subtotal.toLocaleString()}</span>`;
                 cartItemsContainer.appendChild(itemEl);
             });
             if (discountAmount > 0) {
-                appliedDiscounts.forEach(discount => {
-                    const discountEl = document.createElement('div');
-                    discountEl.className = 'customer-cart-item';
-                    discountEl.innerHTML = `<span class="name" style="color: #dc3545; font-weight: bold;">${discount.dealName}</span><span class="subtotal" style="color: #dc3545;">- ¥${discount.amount.toLocaleString()}</span>`;
-                    cartItemsContainer.appendChild(discountEl);
-                });
+                const discountEl = document.createElement('div');
+                discountEl.className = 'customer-cart-item';
+                discountEl.innerHTML = `<span class="name" style="color: #dc3545; font-weight: bold;">セット割引</span><span class="subtotal" style="color: #dc3545;">- ¥${discountAmount.toLocaleString()}</span>`;
+                cartItemsContainer.appendChild(discountEl);
             }
             totalAmountEl.textContent = `¥${finalTotal.toLocaleString()}`;
         }
 
-        db.collection('paymentInstructions').doc('main_customer_display').onSnapshot(doc => { const instruction = doc.data(); if (instruction && instruction.show) { const amount = instruction.amount; const paymentUrl = `https://chofusai2025.moservice.net/pay/7?amount=${amount}`; paypayTotalEl.textContent = `¥${amount.toLocaleString()}`; qrcodeContainer.innerHTML = ''; qrcode = new QRCode(qrcodeContainer, { text: paymentUrl, width: 256, height: 256, colorDark : "#000000", colorLight : "#ffffff", correctLevel : QRCode.CorrectLevel.H }); paypayModal.style.display = 'flex'; } else { paypayModal.style.display = 'none'; if (qrcode) { qrcode.clear(); qrcodeContainer.innerHTML = ''; } } });
-        
-        initialize();
+        db.collection('paymentInstructions').doc('main_customer_display').onSnapshot(doc => {
+            const instruction = doc.data();
+            if (instruction && instruction.show) {
+                const amount = instruction.amount;
+                const paymentUrl = `https://chofusai2025.moservice.net/pay/7?amount=${amount}`;
+                paypayTotalEl.textContent = `¥${amount.toLocaleString()}`;
+                qrcodeContainer.innerHTML = '';
+                qrcode = new QRCode(qrcodeContainer, {
+                    text: paymentUrl,
+                    width: 256,
+                    height: 256,
+                    colorDark : "#000000",
+                    colorLight : "#ffffff",
+                    correctLevel : QRCode.CorrectLevel.H
+                });
+                paypayModal.style.display = 'flex';
+            } else {
+                paypayModal.style.display = 'none';
+                if (qrcode) {
+                    qrcode.clear();
+                    qrcodeContainer.innerHTML = '';
+                }
+            }
+        });
     });
     </script>
 </body>

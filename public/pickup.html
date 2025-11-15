@@ -14,23 +14,23 @@
         .container { height: calc(100vh - 40px); }
         .kds-container { display: flex; flex-direction: column; height: 100%; }
         .kds-grid { display: grid; grid-template-columns: repeat(2, 1fr); overflow-y: auto; flex-grow: 1; align-content: flex-start; padding: 15px; gap: 15px; }
-        .order-card { width: auto; aspect-ratio: 4 / 3; display: flex; flex-direction: column; justify-content: space-between; padding: 10px; font-size: 0.9em; }
+        .order-card { width: auto; aspect-ratio: 3 / 4; display: flex; flex-direction: column; justify-content: space-between; padding: 10px; font-size: 0.9em; }
         .order-items { flex-grow: 1; overflow-y: auto; }
         .pickup-buttons { margin-top: 10px; display: grid; grid-template-columns: 1fr; gap: 8px; }
+        .revert-btn { background-color: #ffc107; } /* 戻すボタン用の色 */
     </style>
 </head>
 <body>
-        <div class="container" style="align-items: flex-start;">
-            <div class="kds-container full-pane" style="margin-right: 20px;">
-                <div class="kds-header">準備完了・お渡し待ち</div>
-                <div class="kds-grid" id="pickup-grid"></div>
-            </div>
-            <div class="kds-container full-pane">
-                <div class="kds-header" style="background-color: #4CAF50; color: white;">お呼び出し中</div>
-                <div class="kds-grid" id="calling-grid"></div>
-            </div>
+    <div class="container" style="align-items: flex-start;">
+        <div class="kds-container full-pane" style="margin-right: 20px;">
+            <div class="kds-header">準備完了・お渡し待ち</div>
+            <div class="kds-grid" id="pickup-grid"></div>
         </div>
-
+        <div class="kds-container full-pane">
+            <div class="kds-header" style="background-color: #4CAF50; color: white;">お呼び出し中</div>
+            <div class="kds-grid" id="calling-grid"></div>
+        </div>
+    </div>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
@@ -40,63 +40,38 @@
         const pickupGrid = document.getElementById('pickup-grid');
         const callingGrid = document.getElementById('calling-grid');
 
-        db.collection('orders').where('status', '==', 'processing').orderBy('createdAt', 'asc')
-          .onSnapshot(snapshot => {
-              pickupGrid.innerHTML = '';
-              snapshot.forEach(doc => {
-                  pickupGrid.appendChild(createOrderCard(doc.data(), doc.id, 'processing'));
-              });
-          });
+        db.collection('orders').where('status', '==', 'processing').orderBy('createdAt', 'asc').onSnapshot(snapshot => {
+            pickupGrid.innerHTML = '';
+            snapshot.forEach(doc => { pickupGrid.appendChild(createOrderCard(doc.data(), doc.id, 'processing')); });
+        });
 
-        db.collection('orders').where('status', '==', 'completed').orderBy('createdAt', 'desc')
-          .onSnapshot(snapshot => {
-              callingGrid.innerHTML = '';
-              snapshot.forEach(doc => {
-                  callingGrid.appendChild(createOrderCard(doc.data(), doc.id, 'completed'));
-              });
-          });
+        db.collection('orders').where('status', '==', 'completed').orderBy('createdAt', 'desc').onSnapshot(snapshot => {
+            callingGrid.innerHTML = '';
+            snapshot.forEach(doc => { callingGrid.appendChild(createOrderCard(doc.data(), doc.id, 'completed')); });
+        });
 
         function createOrderCard(order, orderId, type) {
             const orderCard = document.createElement('div');
             orderCard.className = 'order-card';
             let itemsHtml = '';
-            order.items.forEach(item => {
-                itemsHtml += `<div class="order-item"><span>${item.name}</span><strong>x ${item.quantity}</strong></div>`;
-            });
-
+            order.items.forEach(item => { itemsHtml += `<div class="order-item"><span>${item.name}</span><strong>x ${item.quantity}</strong></div>`; });
             let buttonsHtml = '';
             if (type === 'processing') {
                 orderCard.style.backgroundColor = '#e3f2fd'; orderCard.style.borderColor = '#90caf9';
-                buttonsHtml = `
-                    <div class="pickup-buttons">
-                        <button class="complete-btn" onclick="updateOrderStatus('${orderId}', 'completed')">呼出</button>
-                        <button class="cancel-btn" onclick="updateOrderStatus('${orderId}', 'cancelled')">取消</button>
-                    </div>`;
+                buttonsHtml = `<div class="pickup-buttons"><button class="complete-btn" onclick="updateOrderStatus('${orderId}', 'completed')">呼出</button><button class="cancel-btn" onclick="updateOrderStatus('${orderId}', 'cancelled')">取消</button></div>`;
             } else if (type === 'completed') {
                 orderCard.style.backgroundColor = '#e8f5e9'; orderCard.style.borderColor = '#a5d6a7';
-                buttonsHtml = `
-                    <div class="pickup-buttons">
-                        <button class="archive-btn" onclick="updateOrderStatus('${orderId}', 'archived')">受渡済</button>
-                        <button class="revert-btn" style="background-color: #ffc107; color: #212529;" onclick="updateOrderStatus('${orderId}', 'processing')">準備中に戻す</button>
-                    </div>`;
+                buttonsHtml = `<div class="pickup-buttons"><button class="archive-btn" onclick="updateOrderStatus('${orderId}', 'archived')">受渡済</button><button class="revert-btn" onclick="updateOrderStatus('${orderId}', 'processing')">調理中に戻す</button></div>`;
             }
-
-            orderCard.innerHTML = `
-                <div class="order-header">
-                    <span>#${order.orderNumber}</span>
-                    <span>${new Date(order.createdAt?.toDate()).toLocaleTimeString('ja-JP')}</span>
-                </div>
-                <div class="order-items">${itemsHtml}</div>
-                ${buttonsHtml}`;
+            orderCard.innerHTML = `<div class="order-header"><span>#${order.orderNumber}</span><span>${new Date(order.createdAt?.toDate()).toLocaleTimeString('ja-JP')}</span></div><div class="order-items">${itemsHtml}</div>${buttonsHtml}`;
             return orderCard;
         }
     });
 
     function updateOrderStatus(orderId, newStatus) {
-        if ((newStatus === 'cancelled' && !confirm('本当にこの注文を取消しますか？')) ||
-            (newStatus === 'archived' && !confirm('この呼び出しを非表示にしますか？'))) {
-            return;
-        }
+        if (newStatus === 'cancelled' && !confirm('本当にこの注文を取消しますか？')) { return; }
+        if (newStatus === 'archived' && !confirm('この呼び出しを非表示にしますか？')) { return; }
+        if (newStatus === 'processing' && !confirm('この注文を「調理中」に戻しますか？')) { return; }
         db.collection('orders').doc(orderId).update({ status: newStatus });
     }
     </script>
