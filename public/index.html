@@ -12,18 +12,20 @@
         html { position: fixed; width: 100%; height: 100%; }
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; margin: 0; padding: 20px; background-color: #f4f6f8; color: #333; height: 100vh; box-sizing: border-box; overflow: hidden; }
         .container { display: flex; height: 100%; }
-        .left-pane { flex: 3; margin-right: 20px; }
-        .right-pane { flex: 1; }
-        .products-grid { display: grid; grid-template-columns: 0.3fr 0.3fr 0.3fr; grid-auto-rows: 50%; gap: 15px; }
-        .product-tile { background-color: #fff; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); cursor: pointer; transition: transform 0.1s; display: flex; flex-direction: column; align-items: center; justify-content: space-between; padding: 10px; }
+        .left-pane { flex: 7; margin-right: 20px; display: flex; flex-direction: column; }
+        .right-pane { flex: 3; }
+        .products-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 15px; flex-grow: 1; }
+        .product-tile { background-color: #fff; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); cursor: pointer; transition: transform 0.1s; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; padding: 10px; }
         .product-tile:active { transform: scale(0.95); }
-        .product-tile img { width: 100%; height: 100%; object-fit: cover; border-radius: 4px; margin-bottom: 10px; }
-        .product-tile .product-name { font-size: 1.1em; font-weight: bold; text-align: center; }
-        .product-tile .product-price { font-size: 1em; color: #555; margin-top: 5px; text-align: center; }
+        .product-tile img { width: 100%; height: 65%; object-fit: cover; border-radius: 4px; }
+        .product-tile .product-info { text-align: center; margin-top: 10px; }
+        .product-tile .product-name { font-size: 1.1em; font-weight: bold; }
+        .product-tile .product-price { font-size: 1em; color: #555; }
         .cart-container { background-color: #fff; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); display: flex; flex-direction: column; height: 100%; }
         .cart-header { padding: 15px 20px; border-bottom: 1px solid #eee; font-size: 1.5em; font-weight: bold; position: relative; }
         .cart-items { flex-grow: 1; overflow-y: auto; padding: 10px; }
-        .cart-item { display: flex; justify-content: space-between; align-items: center; padding: 15px; border-bottom: 1px solid #f0f0f0; }
+        .cart-item { display: flex; justify-content: space-between; align-items: center; padding: 15px; border-bottom: 1px solid #f0f0f0; background-color: #fff; transition: background-color 0.3s; }
+        .cart-item.discounted { background-color: #e7f3ff; }
         .cart-item-name { font-size: 1.1em; flex-grow: 1;}
         .cart-item-controls { display: flex; align-items: center; }
         .quantity-btn { width: 30px; height: 30px; border: 1px solid #ccc; background-color: #f9f9f9; border-radius: 50%; font-size: 1.2em; cursor: pointer; }
@@ -39,14 +41,12 @@
         #secret-menu-trigger { position: absolute; top: 0; right: 0; width: 60px; height: 100%; cursor: pointer; }
         .nav-links { margin: 20px 0; display: flex; flex-direction: column; gap: 15px; }
         .nav-links a { display: block; padding: 15px; background-color: #f0f0f0; color: #333; text-decoration: none; font-size: 1.1em; font-weight: bold; border-radius: 8px; transition: background-color 0.2s; }
-        .nav-links a:hover { background-color: #e0e0e0; }
         #close-nav-modal-btn { padding: 10px 20px; font-size: 1em; cursor: pointer; background-color: #6c757d; color: white; border: none; border-radius: 5px; }
         .payment-methods { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px; }
         .payment-btn { padding: 20px; font-size: 1.2em; font-weight: bold; border: 2px solid #ccc; border-radius: 8px; cursor: pointer; background-color: #f9f9f9; transition: background-color 0.2s, border-color 0.2s; }
         .payment-btn.active { background-color: #e7f3ff; border-color: #007bff; }
         .keypad-container { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 15px; }
         .keypad-btn { padding: 20px 0; font-size: 1.8em; border: 1px solid #ddd; border-radius: 8px; background-color: #fff; cursor: pointer; }
-        .keypad-btn:active { background-color: #f0f0f0; }
         #deposit-display { background-color: #f0f2f5; border-radius: 8px; padding: 15px; font-size: 2em; font-weight: bold; text-align: right; margin-bottom: 10px; min-height: 40px; }
         .confirm-payment-area { margin-top: 20px; display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
         .confirm-payment-area button { padding: 15px; font-size: 1.2em; font-weight: bold; border: none; border-radius: 8px; cursor: pointer; color: white; }
@@ -56,7 +56,6 @@
 </head>
 <body>
     <div class="container">
-        <div class="left-pane"><div class="products-grid" id="products-grid"></div></div>
         <div class="right-pane">
             <div class="cart-container">
                 <div class="cart-header">カート<div id="secret-menu-trigger"></div></div>
@@ -73,7 +72,7 @@
             <h2>お会計</h2><p>合計金額: <strong id="modal-total">¥0</strong></p>
             <div class="payment-methods">
                 <button class="payment-btn active" data-method="cash">現金</button>
-                <button class="payment-btn" data-method="paypay">PayPay</button>
+                <button class="payment-btn" data-method="cashless">キャッシュレス決済</button>
             </div>
             <div id="cash-payment-area">
                 <label>お預かり金額</label><div id="deposit-display"></div>
@@ -113,10 +112,12 @@
         setBodyHeight(); window.addEventListener('resize', setBodyHeight);
         document.body.addEventListener('touchmove', function(event) { event.preventDefault(); }, { passive: false });
         
-        const productsGrid = document.getElementById('products-grid'), cartItemsContainer = document.getElementById('cart-items'), totalAmountEl = document.getElementById('total-amount'), checkoutBtn = document.getElementById('checkout-btn'), modal = document.getElementById('checkout-modal'), modalTotalEl = document.getElementById('modal-total'), changeAmountEl = document.getElementById('change-amount'), confirmPaymentBtn = document.getElementById('confirm-payment-btn'), closeModalBtn = document.getElementById('close-modal-btn'), secretMenuTrigger = document.getElementById('secret-menu-trigger'), navModal = document.getElementById('navigation-modal'), closeNavModalBtn = document.getElementById('close-nav-modal-btn'), depositDisplay = document.getElementById('deposit-display'), paymentBtns = document.querySelectorAll('.payment-btn'), keypadBtns = document.querySelectorAll('.keypad-btn'), cashPaymentArea = document.getElementById('cash-payment-area');
+        const productsGrid = document.getElementById('products-grid'), cartItemsContainer = document.getElementById('cart-items'), totalAmountEl = document.getElementById('total-amount'), checkoutBtn = document.getElementById('checkout-btn'), modal = document.getElementById('checkout-modal'), modalTotalEl = document.getElementById('modal-total'), changeAmountEl = document.getElementById('change-amount'), confirmPaymentBtn = document.getElementById('confirm-payment-btn'), closeModalBtn = document.getElementById('close-modal-btn'), secretMenuTrigger = document.getElementById('secret-menu-trigger'), navModal = document.getElementById('navigation-modal'), closeNavModalBtn = document.getElementById('close-nav-modal-btn'), depositDisplay = document.getElementById('deposit-display'), paymentBtns = document.querySelectorAll('.payment-btn'), keypadBtns = document.querySelectorAll('.keypad-btn'), cashPaymentArea = document.getElementById('cash-payment-area'), shortageBtns = document.querySelectorAll('.shortage-btn');
         let products = [], cart = {}, bundleDeals = [];
         let tapCount = 0, tapTimer = null, depositAmount = '', selectedPaymentMethod = 'cash';
-
+        
+        const cartDocRef = db.collection('currentOrder').doc('main_register');
+        
         async function initialize() {
             try {
                 const productsPromise = db.collection('products').orderBy('sortOrder').get();
@@ -125,75 +126,162 @@
                 products = productsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                 bundleDeals = dealsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                 renderProducts();
-            } catch (error) { console.error("初期データの読み込みに失敗:", error); alert("データの読み込みに失敗しました。"); }
+                cartDocRef.onSnapshot(doc => {
+                    // サーバーからの変更のみをリッスンし、ローカルの変更による再描画ループを防ぐ
+                    if (!doc.metadata.hasPendingWrites) {
+                        cart = doc.data()?.items || {};
+                        renderCart();
+                    }
+                });
+            } catch (error) { console.error("初期データの読み込みに失敗:", error); }
         }
         initialize();
 
-        const cartDocRef = db.collection('currentOrder').doc('main_register');
-        cartDocRef.onSnapshot(doc => { cart = doc.data()?.items || {}; renderCart(); });
-
         async function printReceipt(orderDetails) {
-            const createBlackBar = (number) => {
-                const numStr = String(number); let bar = '';
-                for (let i = 0; i < numStr.length + 4; i++) { bar += '█'; }
-                return bar;
-            };
-            let receiptHTML = `<!DOCTYPE html><html><head><style>
-                    @page { margin: 0; size: 50mm auto; }
-                    body { font-family: 'MS Gothic', monospace; margin: 0; padding: 0; color: #000; width: 50mm; font-size: 12pt; line-height: 1.4; }
-                    .receipt-container { padding: 3mm; box-sizing: border-box; }
-                    .center { text-align: center; }
-                    .row { display: flex; justify-content: space-between; align-items: baseline; }
-                    .row .left { text-align: left; white-space: nowrap; }
-                    .row .right { text-align: right; }
-                    hr { border: none; border-top: 1px dashed #000; margin: 2mm 0; }
-                    p { margin: 1mm 0; }
-                    .shop-name { font-size: 11pt; }
-                    .item-name { margin-bottom: -1mm; }
-                    .item-details { padding-left: 4mm; }
-                    .order-number-wrapper { margin-top: 5mm; position: relative; font-size: 3em; font-family: sans-serif; }
-                    .order-number-bg { color: #000; font-weight: normal; }
-                    .order-number-text { position: absolute; top: 0; left: 0; width: 100%; height: 100%; color: #fff; font-weight: bold; }
-                </style></head><body><div class="receipt-container">
-                    <div class="center"><p class="shop-name">第75回調布祭<br>電気通信大学学友会<br>執行委員会</p></div>
-                    <hr><p class="center">${orderDetails.timestamp}</p><hr>`;
+            const createBlackBar = (number) => { const numStr = String(number); let bar = ''; for (let i = 0; i < numStr.length + 4; i++) { bar += '█'; } return bar; };
+            let receiptHTML = `<!DOCTYPE html><html><head><style>@page { margin: 0; size: 50mm auto; } body { font-family: 'MS Gothic', monospace; margin: 0; padding: 0; color: #000; width: 50mm; font-size: 12pt; line-height: 1.4; } .receipt-container { padding: 3mm; box-sizing: border-box; } .center { text-align: center; } .row { display: flex; justify-content: space-between; align-items: baseline; } .row .left { text-align: left; white-space: nowrap; } .row .right { text-align: right; } hr { border: none; border-top: 1px dashed #000; margin: 2mm 0; } p { margin: 1mm 0; } .shop-name { font-size: 11pt; } .item-name { margin-bottom: -1mm; } .item-details { padding-left: 4mm; } .order-number { background-color: #000 !important; color: #fff !important; font-weight: bold; font-size: 3em; padding: 5mm 0; margin-top: 5mm; font-family: sans-serif; }</style></head><body><div class="receipt-container"><div class="center"><p class="shop-name">第75回調布祭<br>電気通信大学学友会<br>執行委員会</p></div><hr><p class="center">${orderDetails.timestamp}</p><hr>`;
             orderDetails.items.forEach(item => {
-                const subtotal = item.quantity * item.price;
-                receiptHTML += `<p class="item-name">${item.name}</p><div class="row item-details"><span class="left">  ${item.quantity} x ${item.price}</span><span class="right">¥${subtotal.toLocaleString()}</span></div>`;
+                const subtotal = item.price * item.quantity;
+                receiptHTML += `<p class="item-name">${item.name}</p><div class="row item-details"><span class="left">  ${item.price} x ${item.quantity}</span><span class="right">¥${subtotal.toLocaleString()}</span></div>`;
             });
             receiptHTML += `<hr>`;
             receiptHTML += `<div class="row"><span class="left">小計</span><span class="right">¥${orderDetails.originalTotal.toLocaleString()}</span></div>`;
-            if(orderDetails.appliedDiscounts && orderDetails.appliedDiscounts.length > 0) {
-                orderDetails.appliedDiscounts.forEach(discount => {
-                    receiptHTML += `<div class="row"><span class="left">${discount.dealName}</span><span class="right">- ¥${discount.amount.toLocaleString()}</span></div>`;
-                });
+            if (orderDetails.appliedDiscounts && orderDetails.appliedDiscounts.length > 0) {
+                orderDetails.appliedDiscounts.forEach(discount => { receiptHTML += `<div class="row"><span class="left">${discount.dealName}</span><span class="right">- ¥${discount.amount.toLocaleString()}</span></div>`; });
             }
             receiptHTML += `<hr>`;
-            receiptHTML += `
-                <div class="row"><strong><span class="left">合計</span></strong><strong><span class="right">¥${orderDetails.totalAmount.toLocaleString()}</span></strong></div>
-                <div class="row"><span class="left">お預かり</span><span class="right">¥${orderDetails.deposit.toLocaleString()}</span></div>
-                <div class="row"><span class="left">お釣り</span><span class="right">¥${orderDetails.change.toLocaleString()}</span></div>
-                <div class="center"><div class="order-number-wrapper"><div class="order-number-bg">${createBlackBar(orderDetails.orderNumber)}</div><div class="order-number-text">${orderDetails.orderNumber}</div></div></div>`;
+            receiptHTML += `<div class="row"><strong><span class="left">合計</span></strong><strong><span class="right">¥${orderDetails.totalAmount.toLocaleString()}</span></strong></div><div class="row"><span class="left">お預かり</span><span class="right">¥${orderDetails.deposit.toLocaleString()}</span></div><div class="row"><span class="left">お釣り</span><span class="right">¥${orderDetails.change.toLocaleString()}</span></div><div class="center"><div class="order-number">${orderDetails.orderNumber}</div></div>`;
             receiptHTML += `</div></body></html>`;
-            try { await db.collection("printQueue").add({ receiptHTML: receiptHTML, orderNumber: orderDetails.orderNumber, createdAt: firebase.firestore.FieldValue.serverTimestamp() }); } catch (error) { console.error("印刷ジョブの追加に失敗:", error); alert("エラー: 印刷ジョブを送信できませんでした。"); }
+
+            try {
+                await db.collection("printQueue").add({
+                    receiptHTML: receiptHTML,
+                    orderNumber: orderDetails.orderNumber,
+                    items: orderDetails.items, // 店舗控え用に商品リストを追加
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+            } catch (error) { console.error("印刷ジョブの追加に失敗:", error); alert("エラー: 印刷ジョブを送信できませんでした。"); }
         }
         
-        function applyBundleDiscounts(currentCart) { let originalTotal = 0, finalTotal = 0, discountAmount = 0; const appliedDiscounts = []; const cartItemsFlat = []; for (const productId in currentCart) { const product = products.find(p => p.id === productId); if (product) { originalTotal += (product.price - (product.discount || 0)) * currentCart[productId]; for (let i = 0; i < currentCart[productId]; i++) cartItemsFlat.push(productId); } } for (const deal of bundleDeals) { const eligibleItems = cartItemsFlat.filter(id => deal.eligibleProductIds.includes(id)); while (eligibleItems.length >= deal.requiredCount) { finalTotal += deal.bundlePrice; const representativePrice = products.find(p => p.id === eligibleItems[0])?.price || 0; const discountValue = (deal.requiredCount * representativePrice) - deal.bundlePrice; appliedDiscounts.push({ dealName: deal.dealName, amount: discountValue }); let itemsToRemove = deal.requiredCount; for (let i = cartItemsFlat.length - 1; i >= 0; i--) { if (itemsToRemove > 0 && deal.eligibleProductIds.includes(cartItemsFlat[i])) { const indexInEligible = eligibleItems.indexOf(cartItemsFlat[i]); if (indexInEligible > -1) eligibleItems.splice(indexInEligible, 1); cartItemsFlat.splice(i, 1); itemsToRemove--; } } } } cartItemsFlat.forEach(productId => { const product = products.find(p => p.id === productId); if (product) finalTotal += (product.price - (product.discount || 0)); }); discountAmount = originalTotal - finalTotal; return { finalTotal, discountAmount, originalTotal, appliedDiscounts }; }
-        function renderCart() { cartItemsContainer.innerHTML = ''; const { finalTotal, discountAmount, appliedDiscounts } = applyBundleDiscounts(cart); Object.keys(cart).forEach(productId => { const product = products.find(p => p.id === productId); if (!product) return; const quantity = cart[productId]; const subtotal = (product.price - (product.discount || 0)) * quantity; const itemEl = document.createElement('div'); itemEl.className = 'cart-item'; itemEl.innerHTML = `<span class="cart-item-name">${product.name}</span><div class="cart-item-controls"><button class="quantity-btn decrease-btn">-</button><span class="quantity">${quantity}</span><button class="quantity-btn increase-btn">+</button></div><span class="cart-item-price">¥${subtotal.toLocaleString()}</span><button class="delete-btn">×</button>`; itemEl.querySelector('.decrease-btn').addEventListener('click', () => updateQuantity(productId, -1)); itemEl.querySelector('.increase-btn').addEventListener('click', () => updateQuantity(productId, 1)); itemEl.querySelector('.delete-btn').addEventListener('click', () => removeFromCart(productId)); cartItemsContainer.appendChild(itemEl); }); if (discountAmount > 0) { appliedDiscounts.forEach(discount => { const discountEl = document.createElement('div'); discountEl.className = 'cart-item'; discountEl.innerHTML = `<span class="cart-item-name" style="color: #dc3545; font-weight: bold;">${discount.dealName}</span><span class="cart-item-price" style="color: #dc3545; font-weight: bold;">- ¥${discount.amount.toLocaleString()}</span>`; cartItemsContainer.appendChild(discountEl); }); } totalAmountEl.textContent = `¥${finalTotal.toLocaleString()}`; checkoutBtn.disabled = Object.keys(cart).length === 0; }
+        function applyBundleDiscounts(currentCart) {
+            let originalTotal = 0, finalTotal = 0, discountAmount = 0;
+            const appliedDiscounts = [];
+            const discountedProductIds = new Set();
+            const cartItemsFlat = [];
+            for (const productId in currentCart) {
+                const product = products.find(p => p.id === productId);
+                if (product) {
+                    originalTotal += (product.price - (product.discount || 0)) * currentCart[productId];
+                    for (let i = 0; i < currentCart[productId]; i++) cartItemsFlat.push(productId);
+                }
+            }
+            for (const deal of bundleDeals) {
+                const eligibleItems = cartItemsFlat.filter(id => deal.eligibleProductIds.includes(id));
+                while (eligibleItems.length >= deal.requiredCount) {
+                    finalTotal += deal.bundlePrice;
+                    const representativePrice = products.find(p => p.id === eligibleItems[0])?.price || 0;
+                    const discountValue = (deal.requiredCount * representativePrice) - deal.bundlePrice;
+                    appliedDiscounts.push({ dealName: deal.dealName, amount: discountValue });
+                    let itemsToRemove = deal.requiredCount;
+                    for (let i = cartItemsFlat.length - 1; i >= 0; i--) {
+                        if (itemsToRemove > 0 && deal.eligibleProductIds.includes(cartItemsFlat[i])) {
+                            discountedProductIds.add(cartItemsFlat[i]);
+                            const indexInEligible = eligibleItems.indexOf(cartItemsFlat[i]);
+                            if (indexInEligible > -1) eligibleItems.splice(indexInEligible, 1);
+                            cartItemsFlat.splice(i, 1);
+                            itemsToRemove--;
+                        }
+                    }
+                }
+            }
+            cartItemsFlat.forEach(productId => {
+                const product = products.find(p => p.id === productId);
+                if (product) finalTotal += (product.price - (product.discount || 0));
+            });
+            discountAmount = originalTotal - finalTotal;
+            return { finalTotal, discountAmount, originalTotal, appliedDiscounts, discountedProductIds };
+        }
+
+        function renderCart() {
+            cartItemsContainer.innerHTML = '';
+            const { finalTotal, discountAmount, appliedDiscounts, discountedProductIds } = applyBundleDiscounts(cart);
+            Object.keys(cart).forEach(productId => {
+                const product = products.find(p => p.id === productId); if (!product) return;
+                const quantity = cart[productId]; const subtotal = (product.price - (product.discount || 0)) * quantity;
+                const itemEl = document.createElement('div');
+                itemEl.className = 'cart-item';
+                if (discountedProductIds.has(productId)) { itemEl.classList.add('discounted'); }
+                itemEl.innerHTML = `<span class="cart-item-name">${product.name}</span><div class="cart-item-controls"><button class="quantity-btn decrease-btn">-</button><span class="quantity">${quantity}</span><button class="quantity-btn increase-btn">+</button></div><span class="cart-item-price">¥${subtotal.toLocaleString()}</span><button class="delete-btn">×</button>`;
+                itemEl.querySelector('.decrease-btn').addEventListener('click', () => updateQuantity(productId, -1));
+                itemEl.querySelector('.increase-btn').addEventListener('click', () => updateQuantity(productId, 1));
+                itemEl.querySelector('.delete-btn').addEventListener('click', () => removeFromCart(productId));
+                cartItemsContainer.appendChild(itemEl);
+            });
+            if (discountAmount > 0) {
+                appliedDiscounts.forEach(discount => {
+                    const discountEl = document.createElement('div'); discountEl.className = 'cart-item';
+                    discountEl.innerHTML = `<span class="cart-item-name" style="color: #dc3545; font-weight: bold;">${discount.dealName}</span><span class="cart-item-price" style="color: #dc3545; font-weight: bold;">- ¥${discount.amount.toLocaleString()}</span>`;
+                    cartItemsContainer.appendChild(discountEl);
+                });
+            }
+            totalAmountEl.textContent = `¥${finalTotal.toLocaleString()}`;
+            checkoutBtn.disabled = Object.keys(cart).length === 0;
+        }
+
         function calculateTotal() { return applyBundleDiscounts(cart).finalTotal; }
-        function renderProducts() { productsGrid.innerHTML = ''; products.forEach(product => { const tile = document.createElement('div'); tile.className = 'product-tile'; const imageUrl = product.imagePath || 'https://via.placeholder.com/150'; tile.innerHTML = `<img src="${imageUrl}" alt="${product.name}"><div><div class="product-name">${product.name}</div><div class="product-price">¥${product.price.toLocaleString()}</div></div>`; tile.onclick = () => addToCart(product.id); productsGrid.appendChild(tile); }); }
-        function addToCart(productId) { cart[productId] = (cart[productId] || 0) + 1; updateFirestoreCart(); }
-        function updateQuantity(productId, change) { const newQuantity = (cart[productId] || 0) + change; if (newQuantity > 0) { cart[productId] = newQuantity; } else { delete cart[productId]; } updateFirestoreCart(); }
-        function removeFromCart(productId) { delete cart[productId]; updateFirestoreCart(); }
-        function updateFirestoreCart() { cartDocRef.set({ items: cart }); }
-        function updatePaymentView() { cashPaymentArea.style.display = selectedPaymentMethod === 'cash' ? 'block' : 'none'; const depositValue = parseInt(depositAmount) || 0; depositDisplay.textContent = `¥${depositValue.toLocaleString()}`; const total = calculateTotal(); const change = depositValue - total; changeAmountEl.textContent = `¥${change >= 0 ? change.toLocaleString() : '---'}`; }
+
+        function renderProducts() {
+            productsGrid.innerHTML = '';
+            products.forEach(product => {
+                const tile = document.createElement('div'); tile.className = 'product-tile';
+                const imageUrl = product.imagePath || 'https://via.placeholder.com/150';
+                tile.innerHTML = `<img src="${imageUrl}" alt="${product.name}"><div class="product-info"><div class="product-name">${product.name}</div><div class="product-price">¥${product.price.toLocaleString()}</div></div>`;
+                tile.onclick = () => addToCart(product.id);
+                productsGrid.appendChild(tile);
+            });
+        }
         
+        function addToCart(productId) {
+            cart[productId] = (cart[productId] || 0) + 1;
+            renderCart(); // ローカルのUIを即時更新
+            updateFirestoreCart(); // Firestoreへの書き込み
+        }
+        function updateQuantity(productId, change) {
+            const newQuantity = (cart[productId] || 0) + change;
+            if (newQuantity > 0) { cart[productId] = newQuantity; } else { delete cart[productId]; }
+            renderCart();
+            updateFirestoreCart();
+        }
+        function removeFromCart(productId) {
+            delete cart[productId];
+            renderCart();
+            updateFirestoreCart();
+        }
+        
+        function updateFirestoreCart() {
+            cartDocRef.set({ items: cart });
+        }
+        
+        function updatePaymentView() {
+            cashPaymentArea.style.display = selectedPaymentMethod === 'cash' ? 'block' : 'none';
+            paymentBtns.forEach(b => b.classList.remove('active'));
+            document.querySelector(`.payment-btn[data-method="${selectedPaymentMethod}"]`).classList.add('active');
+            const depositValue = parseInt(depositAmount) || 0;
+            depositDisplay.textContent = `¥${depositValue.toLocaleString()}`;
+            const total = calculateTotal();
+            const change = depositValue - total;
+            changeAmountEl.textContent = `¥${change >= 0 ? change.toLocaleString() : '---'}`;
+        }
+
         checkoutBtn.onclick = () => {
-            depositAmount = ''; selectedPaymentMethod = 'cash'; updatePaymentView();
+            selectedPaymentMethod = 'cash';
+            depositAmount = ''; 
+            updatePaymentView();
             db.collection('paymentInstructions').doc('main_customer_display').set({ show: false });
             modal.style.display = 'flex';
             modalTotalEl.textContent = `¥${calculateTotal().toLocaleString()}`;
         };
+
         closeModalBtn.onclick = async () => {
             await db.collection('paymentInstructions').doc('main_customer_display').set({ show: false });
             modal.style.display = 'none';
@@ -201,14 +289,9 @@
 
         paymentBtns.forEach(btn => {
             btn.addEventListener('click', async () => {
-                paymentBtns.forEach(b => b.classList.remove('active'));
-                btn.classList.add('active');
                 selectedPaymentMethod = btn.dataset.method;
-                if (selectedPaymentMethod === 'paypay') {
-                    const paypayInstruction = {
-                        show: true,
-                        amount: calculateTotal()
-                    };
+                if (selectedPaymentMethod === 'cashless') {
+                    const paypayInstruction = { show: true, amount: calculateTotal() };
                     await db.collection('paymentInstructions').doc('main_customer_display').set(paypayInstruction);
                 } else {
                     await db.collection('paymentInstructions').doc('main_customer_display').set({ show: false });
@@ -224,8 +307,68 @@
                 updatePaymentView();
             });
         });
+
+        shortageBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                const amount = parseInt(btn.dataset.amount, 10);
+                const total = calculateTotal();
+                depositAmount = String(total - amount);
+                updatePaymentView();
+            });
+        });
         
-        confirmPaymentBtn.onclick = async () => { const { finalTotal, originalTotal, appliedDiscounts } = applyBundleDiscounts(cart); const total = finalTotal; const deposit = parseInt(depositAmount) || 0; if (selectedPaymentMethod === 'cash' && deposit < total) { alert('お預かり金額が不足しています。'); return; } const settingsRef = db.collection('settings').doc('config'); try { const newOrderNumber = await db.runTransaction(async (transaction) => { const settingsDoc = await transaction.get(settingsRef); const newNumber = (settingsDoc.data().lastOrderNumber || 100) + 1; transaction.update(settingsRef, { lastOrderNumber: newNumber }); return newNumber; }); const orderItems = Object.keys(cart).map(productId => { const product = products.find(p => p.id === productId); return { productId, name: product.name, price: product.price, cost: product.cost, discount: product.discount || 0, quantity: cart[productId] }; }); await db.collection('orders').add({ orderNumber: newOrderNumber, items: orderItems, originalTotal: originalTotal, appliedDiscounts: appliedDiscounts, totalAmount: total, deposit: selectedPaymentMethod === 'cash' ? deposit : total, change: selectedPaymentMethod === 'cash' ? deposit - total : 0, paymentMethod: selectedPaymentMethod, status: 'processing', createdAt: firebase.firestore.FieldValue.serverTimestamp() }); if (selectedPaymentMethod === 'cash') { const receiptDetails = { orderNumber: newOrderNumber, items: orderItems, originalTotal: originalTotal, appliedDiscounts: appliedDiscounts, totalAmount: total, deposit: deposit, change: deposit - total, timestamp: new Date().toLocaleString('ja-JP', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'Asia/Tokyo' }) }; await printReceipt(receiptDetails); } if (selectedPaymentMethod === 'paypay') { await db.collection('paymentInstructions').doc('main_customer_display').set({ show: false }); } await cartDocRef.set({ items: {} }); modal.style.display = 'none'; } catch (e) { console.error("取引に失敗しました:", e); alert("会計処理に失敗しました。"); if (selectedPaymentMethod === 'paypay') { await db.collection('paymentInstructions').doc('main_customer_display').set({ show: false }); } } };
+        confirmPaymentBtn.onclick = async () => {
+            const { finalTotal, originalTotal, appliedDiscounts } = applyBundleDiscounts(cart);
+            const total = finalTotal;
+            const deposit = parseInt(depositAmount) || 0;
+            if (selectedPaymentMethod === 'cash' && deposit < total) { alert('お預かり金額が不足しています。'); return; }
+            const settingsRef = db.collection('settings').doc('config');
+            try {
+                const newOrderNumber = await db.runTransaction(async (transaction) => {
+                    const settingsDoc = await transaction.get(settingsRef);
+                    const newNumber = (settingsDoc.data().lastOrderNumber || 100) + 1;
+                    transaction.update(settingsRef, { lastOrderNumber: newNumber });
+                    return newNumber;
+                });
+                const orderItems = Object.keys(cart).map(productId => {
+                    const product = products.find(p => p.id === productId);
+                    return { productId, name: product.name, price: product.price, cost: product.cost, discount: product.discount || 0, quantity: cart[productId] };
+                });
+                
+                await db.collection('orders').add({
+                    orderNumber: newOrderNumber, items: orderItems, originalTotal: originalTotal,
+                    appliedDiscounts: appliedDiscounts, totalAmount: total,
+                    deposit: selectedPaymentMethod === 'cash' ? deposit : total,
+                    change: selectedPaymentMethod === 'cash' ? deposit - total : 0,
+                    paymentMethod: selectedPaymentMethod, status: 'processing',
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+
+                if (selectedPaymentMethod === 'cash') {
+                    const receiptDetails = {
+                        orderNumber: newOrderNumber, items: orderItems,
+                        originalTotal: originalTotal, appliedDiscounts: appliedDiscounts,
+                        totalAmount: total, deposit: deposit, change: deposit - total,
+                        timestamp: new Date().toLocaleString('ja-JP', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'Asia/Tokyo' })
+                    };
+                    await printReceipt(receiptDetails);
+                }
+                
+                if (selectedPaymentMethod === 'cashless') {
+                    await db.collection('paymentInstructions').doc('main_customer_display').set({ show: false });
+                }
+                
+                // カートを空にする処理（ローカルもFirestoreも）
+                cart = {};
+                renderCart();
+                await cartDocRef.set({ items: {} });
+
+                modal.style.display = 'none';
+            } catch (e) {
+                console.error("取引に失敗しました:", e); alert("会計処理に失敗しました。");
+                if (selectedPaymentMethod === 'cashless') { await db.collection('paymentInstructions').doc('main_customer_display').set({ show: false }); }
+            }
+        };
         
         secretMenuTrigger.addEventListener('click', () => {
             tapCount++; clearTimeout(tapTimer);

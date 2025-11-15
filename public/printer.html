@@ -54,20 +54,18 @@
             statusEl.className = `status-${type}`;
         }
 
-        function printReceipt(receiptHTML, callback) {
+        function print(htmlContent, callback) {
             const frameDoc = printFrame.contentWindow.document;
             frameDoc.open();
-            frameDoc.write(receiptHTML);
+            frameDoc.write(htmlContent);
             frameDoc.close();
             
             setTimeout(() => {
                 try {
                     printFrame.contentWindow.focus();
                     printFrame.contentWindow.print();
-                    log('印刷ダイアログを呼び出しました。', 'info');
                     callback(null);
                 } catch (e) {
-                    log(`印刷呼び出しエラー: ${e.message}`, 'error');
                     callback(e);
                 }
             }, 500);
@@ -77,37 +75,73 @@
             log('印刷キューの監視を開始します...');
             db.collection("printQueue").orderBy("createdAt", "asc").limit(1)
                 .onSnapshot(snapshot => {
-                    if (isPrinting) { return; }
-                    if (snapshot.empty) { setStatus('待機中', 'waiting'); return; }
+                    if (isPrinting || snapshot.empty) {
+                        if(snapshot.empty) setStatus('待機中', 'waiting');
+                        return;
+                    }
                     
                     isPrinting = true;
                     const doc = snapshot.docs[0];
                     const printJob = doc.data();
 
                     setStatus(`印刷ジョブ #${printJob.orderNumber} を処理中...`, 'printing');
-                    log(`印刷ジョブ #${printJob.orderNumber} を受信。`);
+                    log(`印刷ジョブ #${printJob.orderNumber} (レシート) を受信。`);
 
-                    printReceipt(printJob.receiptHTML, (error) => {
-                        if (error) {
-                            log(`ジョブ #${printJob.orderNumber} 失敗。ジョブは削除されません。`, 'error');
-                            setTimeout(() => { isPrinting = false; }, 3000); // エラー後、3秒待ってから再試行可能にする
+                    print(printJob.receiptHTML, (receiptError) => {
+                        if (receiptError) {
+                            log(`レシート印刷失敗: ${receiptError.message}`, 'error');
+                            // エラーでもフラグをリセットして次に進む
+                            setTimeout(() => { isPrinting = false; }, 3000);
                             return;
                         }
-                        
-                        // 印刷ダイアログが表示されている間にジョブを削除
-                        doc.ref.delete().then(() => {
-                            log(`ジョブ #${printJob.orderNumber} を正常に削除しました。`, 'success');
-                        }).catch(deleteError => {
-                            log(`ジョブ #${printJob.orderNumber} の削除に失敗: ${deleteError}`, 'error');
-                        }).finally(() => {
-                            // 印刷が成功したと仮定し、3秒後に次のジョブを受け付けられるようにする
-                            setTimeout(() => { isPrinting = false; }, 3000);
-                        });
+                        log('レシート印刷コマンド送信完了。', 'success');
+
+                        // 店舗控え用のHTMLを生成
+                        const stubHTML = createStubHTML(printJob);
+                        log(`店舗控え #${printJob.orderNumber} の印刷を開始。`);
+
+                        // 控えを印刷 (レシート印刷の完了を待たずに実行)
+                        setTimeout(() => {
+                            print(stubHTML, (stubError) => {
+                                if (stubError) {
+                                    log(`店舗控え印刷失敗: ${stubError.message}`, 'error');
+                                } else {
+                                    log('店舗控え印刷コマンド送信完了。', 'success');
+                                }
+                                // すべての印刷が終わったらジョブを削除
+                                doc.ref.delete().finally(() => {
+                                    setTimeout(() => { isPrinting = false; }, 3000);
+                                });
+                            });
+                        }, 2000); // レシートと控えの印刷が重ならないように少し待つ
                     });
                 }, error => {
                     log(`監視エラー: ${error}`, 'error');
                     setStatus(`監視エラー`, 'error');
                 });
+        }
+
+        function createStubHTML(printJob) {
+            let itemsText = '';
+            if(printJob.items && printJob.items.forEach) {
+                printJob.items.forEach(item => {
+                    itemsText += `<p class="item">${item.name} x ${item.quantity}</p>`;
+                });
+            }
+            return `
+                <!DOCTYPE html><html><head><style>
+                    @page { margin: 0; size: 50mm auto; }
+                    body { font-family: 'MS Gothic', monospace; margin: 0; padding: 0; color: #000; width: 50mm; font-size: 14pt; }
+                    .stub-container { padding: 5mm 3mm; box-sizing: border-box; text-align: center; }
+                    .title { font-size: 16pt; font-weight: bold; border-bottom: 2px solid #000; padding-bottom: 2mm; margin-bottom: 3mm;}
+                    .order-number { font-size: 4em; font-weight: bold; margin: 2mm 0; }
+                    .item { margin: 1mm 0; font-size: 12pt; }
+                </style></head><body><div class="stub-container">
+                    <div class="title">店舗控え</div>
+                    <div class="order-number">${printJob.orderNumber}</div>
+                    <div class="items-list">${itemsText}</div>
+                </div></body></html>
+            `;
         }
         
         setStatus('初期化中...');
