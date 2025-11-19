@@ -73,7 +73,7 @@
             <h2>お会計</h2><p>合計金額: <strong id="modal-total">¥0</strong></p>
             <div class="payment-methods">
                 <button class="payment-btn active" data-method="cash">現金</button>
-                <button class="payment-btn" data-method="paypay">PayPay</button>
+                <button class="payment-btn" data-method="paypay">キャッシュレス</button>
             </div>
             <div id="cash-payment-area">
                 <label>お預かり金額</label><div id="deposit-display"></div>
@@ -238,7 +238,80 @@
             });
         });
         
-        confirmPaymentBtn.onclick = async () => { const { finalTotal, originalTotal, appliedDiscounts } = applyBundleDiscounts(cart); const total = finalTotal; const deposit = parseInt(depositAmount) || 0; if (selectedPaymentMethod === 'cash' && deposit < total) { alert('お預かり金額が不足しています。'); return; } const settingsRef = db.collection('settings').doc('config'); try { const newOrderNumber = await db.runTransaction(async (transaction) => { const settingsDoc = await transaction.get(settingsRef); const newNumber = (settingsDoc.data().lastOrderNumber || 0) + 1; transaction.update(settingsRef, { lastOrderNumber: newNumber }); return newNumber; }); const orderItems = Object.keys(cart).map(productId => { const product = products.find(p => p.id === productId); return { productId, name: product.name, price: product.price, cost: product.cost, discount: product.discount || 0, quantity: cart[productId] }; }); await db.collection('orders').add({ orderNumber: newOrderNumber, items: orderItems, originalTotal: originalTotal, appliedDiscounts: appliedDiscounts, totalAmount: total, deposit: selectedPaymentMethod === 'cash' ? deposit : total, change: selectedPaymentMethod === 'cash' ? deposit - total : 0, paymentMethod: selectedPaymentMethod, status: 'processing', createdAt: firebase.firestore.FieldValue.serverTimestamp() }); if (selectedPaymentMethod === 'cash') { const receiptDetails = { orderNumber: newOrderNumber, items: orderItems, originalTotal: originalTotal, appliedDiscounts: appliedDiscounts, totalAmount: total, deposit: deposit, change: deposit - total, timestamp: new Date().toLocaleString('ja-JP', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'Asia/Tokyo' }) }; await printReceipt(receiptDetails); } if (selectedPaymentMethod === 'paypay') { await db.collection('paymentInstructions').doc('main_customer_display').set({ show: false }); } await cartDocRef.set({ items: {} }); modal.style.display = 'none'; } catch (e) { console.error("取引に失敗しました:", e); alert("会計処理に失敗しました。"); if (selectedPaymentMethod === 'paypay') { await db.collection('paymentInstructions').doc('main_customer_display').set({ show: false }); } } };
+        confirmPaymentBtn.onclick = async () => {
+            const { finalTotal, originalTotal, appliedDiscounts } = applyBundleDiscounts(cart);
+            const total = finalTotal;
+            const deposit = parseInt(depositAmount) || 0;
+            
+            // 現金決済の場合のみ、預かり金のチェックを行う
+            if (selectedPaymentMethod === 'cash' && deposit < total) {
+                alert('お預かり金額が不足しています。');
+                return;
+            }
+            
+            const settingsRef = db.collection('settings').doc('config');
+            try {
+                const newOrderNumber = await db.runTransaction(async (transaction) => {
+                    const settingsDoc = await transaction.get(settingsRef);
+                    const newNumber = (settingsDoc.data().lastOrderNumber || 100) + 1;
+                    transaction.update(settingsRef, { lastOrderNumber: newNumber });
+                    return newNumber;
+                });
+                const orderItems = Object.keys(cart).map(productId => {
+                    const product = products.find(p => p.id === productId);
+                    return { productId, name: product.name, price: product.price, cost: product.cost, discount: product.discount || 0, quantity: cart[productId] };
+                });
+                
+                await db.collection('orders').add({
+                    orderNumber: newOrderNumber,
+                    items: orderItems,
+                    originalTotal: originalTotal,
+                    appliedDiscounts: appliedDiscounts,
+                    totalAmount: total,
+                    deposit: selectedPaymentMethod === 'cash' ? deposit : total,
+                    change: selectedPaymentMethod === 'cash' ? deposit - total : 0,
+                    paymentMethod: selectedPaymentMethod,
+                    status: 'processing',
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+
+                // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
+                // ★★★ ここからが修正点です ★★★
+                // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
+
+                // 決済方法に関わらず、常にレシート印刷用のデータを作成して印刷キューに送る
+                const receiptDetails = {
+                    orderNumber: newOrderNumber,
+                    items: orderItems,
+                    originalTotal: originalTotal,
+                    appliedDiscounts: appliedDiscounts,
+                    totalAmount: total,
+                    // キャッシュレスの場合は、お預かり・お釣りは合計金額と同額（お釣りゼロ）として印字する
+                    deposit: selectedPaymentMethod === 'cash' ? deposit : total,
+                    change: selectedPaymentMethod === 'cash' ? deposit - total : 0,
+                    timestamp: new Date().toLocaleString('ja-JP', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'Asia/Tokyo' })
+                };
+                await printReceipt(receiptDetails);
+                
+                // ★★★★★★★★★★★★★★★★
+                // ★★★ 修正はここまで ★★★
+                // ★★★★★★★★★★★★★★★★
+
+                if (selectedPaymentMethod === 'paypay') {
+                    await db.collection('paymentInstructions').doc('main_customer_display').set({ show: false });
+                }
+                
+                await cartDocRef.set({ items: {} });
+                modal.style.display = 'none';
+
+            } catch (e) {
+                console.error("取引に失敗しました:", e);
+                alert("会計処理に失敗しました。");
+                if (selectedPaymentMethod === 'paypay') {
+                    await db.collection('paymentInstructions').doc('main_customer_display').set({ show: false });
+                }
+            }
+        };
         
         secretMenuTrigger.addEventListener('click', () => {
             tapCount++; clearTimeout(tapTimer);
