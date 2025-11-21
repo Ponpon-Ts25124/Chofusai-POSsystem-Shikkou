@@ -253,7 +253,7 @@
             try {
                 const newOrderNumber = await db.runTransaction(async (transaction) => {
                     const settingsDoc = await transaction.get(settingsRef);
-                    const newNumber = (settingsDoc.data().lastOrderNumber || 100) + 1;
+                    const newNumber = (settingsDoc.data().lastOrderNumber || 0) + 1;
                     transaction.update(settingsRef, { lastOrderNumber: newNumber });
                     return newNumber;
                 });
