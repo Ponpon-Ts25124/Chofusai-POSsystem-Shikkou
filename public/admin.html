@@ -3,94 +3,50 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>管理画面</title>
-    <link rel="manifest" href="/manifest.json">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="POSレジ">
+    <title>設定画面</title>
     <link rel="stylesheet" href="style.css">
-    <!-- Chart.jsライブラリを読み込む -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        /* ↓↓↓↓ この3行を一番上に追加してください ↓↓↓↓ */
-        html, body { overflow: auto !important;}
-        .summary-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-bottom: 30px; }
-        .card { background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-        .summary-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-bottom: 30px; }
-        .card { background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-        .card h3 { margin-top: 0; color: #555; }
-        .card .amount { font-size: 2em; font-weight: bold; }
-        .charts-container { display: grid; grid-template-columns: 1fr; gap: 30px; margin-bottom: 30px; }
-        .admin-header { display: flex; justify-content: space-between; align-items: center; }
+        .admin-header { display: flex; justify-content: space-between; align-items: center; padding-bottom: 10px; border-bottom: 2px solid #333; margin-bottom: 20px; }
+        .card { background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        .deal-form-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; margin-bottom: 15px; }
+        .product-checkboxes { max-height: 150px; overflow-y: auto; border: 1px solid #ccc; padding: 10px; border-radius: 4px; }
+        .deal-card { border: 1px solid #ddd; padding: 15px; border-radius: 8px; margin-bottom: 10px; }
+        
+        /* 売り切れスイッチのデザイン */
+        .sold-out-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 15px; }
+        .product-status-card { border: 1px solid #ddd; padding: 15px; border-radius: 8px; text-align: center; }
+        .product-status-card.sold-out { background-color: #ffebee; border-color: #ffcdd2; }
+        .toggle-btn {
+            padding: 10px 20px; border: none; border-radius: 20px; cursor: pointer; font-weight: bold; width: 100%;
+            transition: background-color 0.3s;
+        }
+        .btn-selling { background-color: #4CAF50; color: white; }
+        .btn-soldout { background-color: #f44336; color: white; }
+        
+        .nav-btn { padding: 10px 20px; background-color: #007bff; color: white; text-decoration: none; border-radius: 5px; }
     </style>
 </head>
 <body>
     <div class="admin-container">
         <div class="admin-header">
-            <span>管理画面 - 売上分析</span>
-            <button id="logout-btn">ログアウト</button>
+            <h2>設定画面 (在庫・割引)</h2>
+            <div>
+                <a href="admin2.html" class="nav-btn">売上データ画面へ</a>
+                <button id="logout-btn" style="margin-left: 10px;">ログアウト</button>
+            </div>
         </div>
         <div style="padding: 20px;">
-            <!-- サマリーカード -->
-            <div class="summary-cards">
-                <div class="card">
-                    <h3>総売上</h3>
-                    <div class="amount" id="summary-total-sales">¥0</div>
-                </div>
-                <div class="card">
-                    <h3>総利益</h3>
-                    <div class="amount" id="summary-total-profit">¥0</div>
-                </div>
-                <div class="card">
-                    <h3>利益率</h3>
-                    <div class="amount" id="summary-profit-rate">0%</div>
-                </div>
-            </div>
-
-            <!-- グラフ表示エリア -->
-            <div class="charts-container">
-                <div class="card">
-                    <h3>時間帯別 売上</h3>
-                    <div class="chart-wrapper" style="position: relative; height:400px; width:100%">
-                        <canvas id="sales-chart"></canvas>
-                    </div>
-                </div>
-            </div>
             
-            <!-- 詳細テーブル -->
-            <h2>決済方法別 詳細</h2>
-            <table border="1" style="width: 100%; border-collapse: collapse; margin-top: 15px;">
-                <thead>
-                    <tr style="background-color: #f2f2f2;">
-                        <th style="padding: 8px;">決済方法</th>
-                        <th style="padding: 8px;">売上</th>
-                        <th style="padding: 8px;">利益</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td style="padding: 8px;">現金</td>
-                        <td style="padding: 8px; text-align: right;" id="detail-cash-sales">¥0</td>
-                        <td style="padding: 8px; text-align: right;" id="detail-cash-profit">¥0</td>
-                    </tr>
-                    <tr>
-                        <td style="padding: 8px;">キャッシュレス決済</td>
-                        <td style="padding: 8px; text-align: right;" id="detail-paypay-sales">¥0</td>
-                        <td style="padding: 8px; text-align: right;" id="detail-paypay-profit">¥0</td>
-                    </tr>
-                </tbody>
-                <tfoot>
-                    <tr style="font-weight: bold; background-color: #f2f2f2;">
-                        <td style="padding: 8px;">合計</td>
-                        <td style="padding: 8px; text-align: right;" id="detail-total-sales">¥0</td>
-                        <td style="padding: 8px; text-align: right;" id="detail-total-profit">¥0</td>
-                    </tr>
-                </tfoot>
-            </table>
-        </div>
-    </div>
+            <!-- 売り切れ管理セクション -->
+            <fieldset>
+                <legend><h2>売り切れ設定</h2></legend>
+                <p>ボタンを押すと「販売中」と「売り切れ」が切り替わります。</p>
+                <div class="sold-out-grid" id="sold-out-grid">
+                    <!-- 商品リストがここに表示されます -->
+                </div>
+            </fieldset>
 
-            <!-- セット割引管理セクション (ここからが新しい部分) -->
+            <!-- セット割引管理セクション -->
             <fieldset style="margin-top: 30px;">
                 <legend><h2>セット割引 管理</h2></legend>
                 <div class="card">
@@ -106,8 +62,8 @@
                     <div class="product-checkboxes" id="product-checkboxes"></div>
                     <label style="margin-top:15px; display:inline-block;"><input type="checkbox" id="deal-is-active" checked> この割引を有効にする</label>
                     <div style="margin-top: 20px;">
-                        <button id="save-deal-btn">保存</button>
-                        <button id="clear-form-btn" style="background-color: #6c757d;">クリア</button>
+                        <button id="save-deal-btn" class="nav-btn">保存</button>
+                        <button id="clear-form-btn" style="background-color: #6c757d; border:none; padding:10px 20px; color:white; border-radius:5px;">クリア</button>
                     </div>
                 </div>
                 <div class="card" style="margin-top: 20px;">
@@ -125,10 +81,10 @@
 
     <script>
     document.addEventListener('DOMContentLoaded', function() {
-        // --- 変数定義 ---
         const logoutBtn = document.getElementById('logout-btn');
-        let salesChartInstance = null;
-        let allProducts = []; // 商品リストを保持
+        const soldOutGrid = document.getElementById('sold-out-grid');
+        
+        // 割引関連の要素
         const dealIdInput = document.getElementById('deal-id');
         const dealNameInput = document.getElementById('deal-name');
         const dealPriorityInput = document.getElementById('deal-priority');
@@ -140,235 +96,121 @@
         const clearFormBtn = document.getElementById('clear-form-btn');
         const existingDealsContainer = document.getElementById('existing-deals');
 
-        // --- 認証と初期読み込み ---
+        let allProducts = [];
+
         auth.onAuthStateChanged(user => {
             if (user) {
-                initializeChart();
-                loadSalesData();
-                loadProductsAndDeals(); // ★割引管理用のデータも読み込む
+                loadData();
             } else {
                 window.location.href = 'login.html';
             }
         });
 
-        // --- イベントリスナー ---
         logoutBtn.addEventListener('click', () => { auth.signOut().then(() => { window.location.href = 'login.html'; }); });
         saveDealBtn.addEventListener('click', saveBundleDeal);
         clearFormBtn.addEventListener('click', clearDealForm);
 
-        // --- 割引管理機能 ---
-        async function loadProductsAndDeals() {
-            // 商品一覧を取得してチェックボックスを生成
-            const productsSnapshot = await db.collection('products').orderBy('sortOrder').get();
-            allProducts = productsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            
-            productCheckboxesContainer.innerHTML = '';
-            allProducts.forEach(product => {
-                const label = document.createElement('label');
-                label.style.display = 'block';
-                label.innerHTML = `<input type="checkbox" class="product-checkbox" value="${product.id}"> ${product.name}`;
-                productCheckboxesContainer.appendChild(label);
+        function loadData() {
+            // 商品データの監視（売り切れ設定用）
+            db.collection('products').orderBy('sortOrder').onSnapshot(snapshot => {
+                allProducts = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                renderSoldOutGrid();
+                renderDealFormCheckboxes(); // 割引フォームのチェックボックスも更新
             });
 
-            // 既存の割引ルールを監視
+            // 割引ルールの監視
             db.collection('bundleDeals').orderBy('priority', 'desc').onSnapshot(snapshot => {
                 existingDealsContainer.innerHTML = '';
                 snapshot.forEach(doc => {
                     const deal = { id: doc.id, ...doc.data() };
                     const dealCard = document.createElement('div');
                     dealCard.className = 'deal-card';
-                    const eligibleProductNames = deal.eligibleProductIds.map(id => allProducts.find(p => p.id === id)?.name || '不明な商品').join(', ');
+                    const eligibleProductNames = deal.eligibleProductIds.map(id => allProducts.find(p => p.id === id)?.name || '削除済商品').join(', ');
                     
                     dealCard.innerHTML = `
                         <h4>${deal.dealName} (${deal.isActive ? '有効' : '無効'})</h4>
                         <p>内容: ${deal.requiredCount}個で ${deal.bundlePrice}円 (優先度: ${deal.priority})</p>
                         <p>対象商品: ${eligibleProductNames}</p>
                         <button data-id="${deal.id}" class="edit-deal-btn">編集</button>
-                        <button data-id="${deal.id}" class="delete-deal-btn" style="background-color:#dc3545;">削除</button>
+                        <button data-id="${deal.id}" class="delete-deal-btn" style="background-color:#dc3545; color:white; border:none; padding:5px 10px; border-radius:3px; margin-left:5px;">削除</button>
                     `;
                     existingDealsContainer.appendChild(dealCard);
                 });
-                // 編集・削除ボタンにイベントリスナーを設定
                 document.querySelectorAll('.edit-deal-btn').forEach(btn => btn.addEventListener('click', (e) => loadDealIntoForm(e.target.dataset.id)));
                 document.querySelectorAll('.delete-deal-btn').forEach(btn => btn.addEventListener('click', (e) => deleteBundleDeal(e.target.dataset.id)));
             });
         }
 
+        // --- 売り切れ管理機能 ---
+        function renderSoldOutGrid() {
+            soldOutGrid.innerHTML = '';
+            allProducts.forEach(product => {
+                const card = document.createElement('div');
+                card.className = `product-status-card ${product.isSoldOut ? 'sold-out' : ''}`;
+                
+                const btnClass = product.isSoldOut ? 'btn-soldout' : 'btn-selling';
+                const btnText = product.isSoldOut ? '売切 (タップして販売再開)' : '販売中 (タップして売切)';
+
+                card.innerHTML = `
+                    <h3>${product.name}</h3>
+                    <button class="toggle-btn ${btnClass}" onclick="toggleSoldOut('${product.id}', ${product.isSoldOut})">${btnText}</button>
+                `;
+                soldOutGrid.appendChild(card);
+            });
+        }
+
+        // グローバル関数にしてHTMLから呼べるようにする
+        window.toggleSoldOut = async function(productId, currentStatus) {
+            try {
+                // ステータスを反転させて更新
+                await db.collection('products').doc(productId).update({
+                    isSoldOut: !currentStatus
+                });
+            } catch (e) {
+                console.error(e);
+                alert('更新に失敗しました');
+            }
+        };
+
+        // --- 割引管理機能 (共通ロジック) ---
+        function renderDealFormCheckboxes() {
+            const currentChecked = Array.from(document.querySelectorAll('.product-checkbox:checked')).map(cb => cb.value);
+            productCheckboxesContainer.innerHTML = '';
+            allProducts.forEach(product => {
+                const label = document.createElement('label');
+                label.style.display = 'block';
+                const isChecked = currentChecked.includes(product.id) ? 'checked' : '';
+                label.innerHTML = `<input type="checkbox" class="product-checkbox" value="${product.id}" ${isChecked}> ${product.name}`;
+                productCheckboxesContainer.appendChild(label);
+            });
+        }
+
         function clearDealForm() {
-            dealIdInput.value = '';
-            dealNameInput.value = '';
-            dealPriorityInput.value = '';
-            dealRequiredCountInput.value = '';
-            dealBundlePriceInput.value = '';
-            dealIsActiveCheckbox.checked = true;
+            dealIdInput.value = ''; dealNameInput.value = ''; dealPriorityInput.value = ''; dealRequiredCountInput.value = ''; dealBundlePriceInput.value = ''; dealIsActiveCheckbox.checked = true;
             document.querySelectorAll('.product-checkbox').forEach(cb => cb.checked = false);
         }
         
         async function loadDealIntoForm(id) {
             const dealDoc = await db.collection('bundleDeals').doc(id).get();
             const deal = dealDoc.data();
-            dealIdInput.value = id;
-            dealNameInput.value = deal.dealName;
-            dealPriorityInput.value = deal.priority;
-            dealRequiredCountInput.value = deal.requiredCount;
-            dealBundlePriceInput.value = deal.bundlePrice;
-            dealIsActiveCheckbox.checked = deal.isActive;
-            document.querySelectorAll('.product-checkbox').forEach(cb => {
-                cb.checked = deal.eligibleProductIds.includes(cb.value);
-            });
+            dealIdInput.value = id; dealNameInput.value = deal.dealName; dealPriorityInput.value = deal.priority; dealRequiredCountInput.value = deal.requiredCount; dealBundlePriceInput.value = deal.bundlePrice; dealIsActiveCheckbox.checked = deal.isActive;
+            document.querySelectorAll('.product-checkbox').forEach(cb => { cb.checked = deal.eligibleProductIds.includes(cb.value); });
         }
 
         async function saveBundleDeal() {
             const eligibleProductIds = Array.from(document.querySelectorAll('.product-checkbox:checked')).map(cb => cb.value);
-            if (!dealNameInput.value || eligibleProductIds.length === 0) {
-                alert('割引名と対象商品を1つ以上選択してください。');
-                return;
-            }
+            if (!dealNameInput.value || eligibleProductIds.length === 0) { alert('割引名と対象商品を1つ以上選択してください。'); return; }
             const dealData = {
-                dealName: dealNameInput.value,
-                priority: Number(dealPriorityInput.value) || 0,
-                requiredCount: Number(dealRequiredCountInput.value),
-                bundlePrice: Number(dealBundlePriceInput.value),
-                eligibleProductIds: eligibleProductIds,
-                isActive: dealIsActiveCheckbox.checked,
+                dealName: dealNameInput.value, priority: Number(dealPriorityInput.value) || 0, requiredCount: Number(dealRequiredCountInput.value), bundlePrice: Number(dealBundlePriceInput.value), eligibleProductIds: eligibleProductIds, isActive: dealIsActiveCheckbox.checked,
             };
-
             const id = dealIdInput.value;
-            if (id) { // IDがあれば更新
-                await db.collection('bundleDeals').doc(id).set(dealData, { merge: true });
-            } else { // IDがなければ新規作成
-                await db.collection('bundleDeals').add(dealData);
-            }
-            alert('割引ルールを保存しました。');
-            clearDealForm();
+            if (id) { await db.collection('bundleDeals').doc(id).set(dealData, { merge: true }); } 
+            else { await db.collection('bundleDeals').add(dealData); }
+            alert('割引ルールを保存しました。'); clearDealForm();
         }
 
         async function deleteBundleDeal(id) {
-            if (confirm('本当にこの割引ルールを削除しますか？')) {
-                await db.collection('bundleDeals').doc(id).delete();
-                alert('削除しました。');
-            }
-        }
-        
-        function initializeChart() {
-            const ctx = document.getElementById('sales-chart').getContext('2d');
-            salesChartInstance = new Chart(ctx, {
-                type: 'bar',
-                data: {
-                    labels: [], // 最初は空
-                    datasets: [
-                        {
-                            label: '現金 売上',
-                            data: [], // 最初は空
-                            backgroundColor: 'rgba(54, 162, 235, 0.6)',
-                            borderColor: 'rgba(54, 162, 235, 1)',
-                            borderWidth: 1
-                        },
-                        {
-                            label: 'キャッシュレス決済 売上',
-                            data: [], // 最初は空
-                            backgroundColor: 'rgba(255, 99, 132, 0.6)',
-                            borderColor: 'rgba(255, 99, 132, 1)',
-                            borderWidth: 1
-                        }
-                    ]
-                },
-                options: {
-                    scales: {
-                        x: { stacked: true },
-                        y: { stacked: true, beginAtZero: true }
-                    },
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    animation: {
-                        duration: 500 // 更新時のアニメーションを少しつける
-                    }
-                }
-            });
-        }
-        
-        // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
-        // ★★★ renderSalesChart関数を、データ更新方式に変更 ★★★
-        // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
-
-        /**
-         * グラフのデータを更新するための関数
-         * @param {object} hourlyData - 時間帯別のデータ
-         */
-        function renderSalesChart(hourlyData) {
-            if (!salesChartInstance) return; // グラフが初期化されていなければ何もしない
-
-            const sortedHours = Object.keys(hourlyData).sort();
-
-            const labels = sortedHours.map(hour => `${hour}時`);
-            const cashSalesData = sortedHours.map(hour => hourlyData[hour].cashSales || 0);
-            const paypaySalesData = sortedHours.map(hour => hourlyData[hour].paypaySales || 0);
-
-            // データを更新
-            salesChartInstance.data.labels = labels;
-            salesChartInstance.data.datasets[0].data = cashSalesData;
-            salesChartInstance.data.datasets[1].data = paypaySalesData;
-            
-            // グラフを再描画
-            salesChartInstance.update();
-        }
-
-        // --- ここから下のロジックはほぼ同じ ---
-
-        auth.onAuthStateChanged(user => {
-            if (user) {
-                initializeChart(); // 最初にグラフの器を準備する
-                loadSalesData();
-            } else {
-                window.location.href = 'login.html';
-            }
-        });
-
-        logoutBtn.addEventListener('click', () => {
-            auth.signOut().then(() => { window.location.href = 'login.html'; });
-        });
-
-        function getTodayDateId() {
-            const now = new Date();
-            const jstOffset = 9 * 60;
-            const jstDate = new Date(now.getTime() + (jstOffset + now.getTimezoneOffset()) * 60000);
-            const yyyy = jstDate.getFullYear();
-            const mm = String(jstDate.getMonth() + 1).padStart(2, "0");
-            const dd = String(jstDate.getDate()).padStart(2, "0");
-            return `${yyyy}-${mm}-${dd}`;
-        }
-
-        function loadSalesData() {
-            const todayId = getTodayDateId();
-            const summaryRef = db.collection("salesSummaries").doc(todayId);
-
-            summaryRef.onSnapshot(doc => {
-                const data = doc.exists ? doc.data() : {};
-                updateDashboard(data);
-            });
-        }
-        
-        function updateDashboard(data) {
-            const totalSales = data.totalSales || 0;
-            const totalProfit = data.totalProfit || 0;
-            const cashSales = data.cashSales || 0;
-            const cashProfit = data.cashProfit || 0;
-            const paypaySales = data.paypaySales || 0;
-            const paypayProfit = data.paypayProfit || 0;
-            const profitRate = totalSales > 0 ? ((totalProfit / totalSales) * 100).toFixed(1) : 0;
-            
-            document.getElementById('summary-total-sales').textContent = `¥${totalSales.toLocaleString()}`;
-            document.getElementById('summary-total-profit').textContent = `¥${totalProfit.toLocaleString()}`;
-            document.getElementById('summary-profit-rate').textContent = `${profitRate}%`;
-
-            document.getElementById('detail-cash-sales').textContent = `¥${cashSales.toLocaleString()}`;
-            document.getElementById('detail-cash-profit').textContent = `¥${cashProfit.toLocaleString()}`;
-            document.getElementById('detail-paypay-sales').textContent = `¥${paypaySales.toLocaleString()}`;
-            document.getElementById('detail-paypay-profit').textContent = `¥${paypayProfit.toLocaleString()}`;
-            document.getElementById('detail-total-sales').textContent = `¥${totalSales.toLocaleString()}`;
-            document.getElementById('detail-total-profit').textContent = `¥${totalProfit.toLocaleString()}`;
-
-            renderSalesChart(data.hourly || {}); // グラフのデータ更新関数を呼び出す
+            if (confirm('本当にこの割引ルールを削除しますか？')) { await db.collection('bundleDeals').doc(id).delete(); alert('削除しました。'); }
         }
     });
     </script>

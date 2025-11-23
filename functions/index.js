@@ -1,35 +1,27 @@
-// 最新のv2 SDKのモジュールをインポートします
 const {onDocumentCreated} = require("firebase-functions/v2/firestore");
 const {initializeApp} = require("firebase-admin/app");
-const {getFirestore} = require("firebase-admin/firestore");
+const {getFirestore, FieldValue} = require("firebase-admin/firestore");
 const {logger} = require("firebase-functions");
 
-// アプリを初期化
 initializeApp();
 
-/**
- * ordersコレクションに新しいドキュメントが作成されたときにトリガーされる関数
- */
 exports.aggregateSalesOnOrderCreate = onDocumentCreated({
-  document: "orders/{orderId}", // 監視するドキュメントのパス
-  region: "asia-northeast1",   // 関数の実行リージョン
+  document: "orders/{orderId}",
+  region: "asia-northeast1",
 }, async (event) => {
-  // イベントデータからドキュメントのスナップショットを取得
   const snap = event.data;
   if (!snap) {
     logger.log("No data associated with the event");
     return;
   }
   const orderData = snap.data();
+  const db = getFirestore();
 
   try {
-    const db = getFirestore();
-
-    // 1. 設定からPayPay手数料率を取得
+    // --- 1. 売上集計処理 (既存機能) ---
     const settingsSnap = await db.collection("settings").doc("config").get();
     const paypayFeePercentage = settingsSnap.data().paypayFeePercentage || 0;
 
-    // 2. 注文内容から原価を計算
     let totalCost = 0;
     if (orderData.items && Array.isArray(orderData.items)) {
       orderData.items.forEach((item) => {
@@ -37,7 +29,6 @@ exports.aggregateSalesOnOrderCreate = onDocumentCreated({
       });
     }
 
-    // 3. PayPay決済の場合、手数料を原価に加算
     if (orderData.paymentMethod === "paypay") {
       const fee = orderData.totalAmount * (paypayFeePercentage / 100.0);
       totalCost += fee;
@@ -46,7 +37,6 @@ exports.aggregateSalesOnOrderCreate = onDocumentCreated({
     const totalSales = orderData.totalAmount;
     const totalProfit = totalSales - totalCost;
 
-    // 4. 日本時間の日付と時間を取得
     const jstDate = new Date(Date.now() + 9 * 60 * 60 * 1000);
     const yyyy = jstDate.getUTCFullYear();
     const mm = String(jstDate.getUTCMonth() + 1).padStart(2, "0");
@@ -55,50 +45,93 @@ exports.aggregateSalesOnOrderCreate = onDocumentCreated({
     const dateId = `${yyyy}-${mm}-${dd}`;
 
     const summaryRef = db.collection("salesSummaries").doc(dateId);
+    const batch = db.batch();
+    const increment = FieldValue.increment;
 
-    // 5. トランザクションを使って安全に集計データを更新
-    await db.runTransaction(async (transaction) => {
-      const summaryDoc = await transaction.get(summaryRef);
+    const updateData = {
+      date: dateId,
+      totalSales: increment(totalSales),
+      totalProfit: increment(totalProfit),
+    };
+    updateData[`hourly.${hour}.sales`] = increment(totalSales);
+    updateData[`hourly.${hour}.profit`] = increment(totalProfit);
 
-      let currentData;
-      if (!summaryDoc.exists) {
-        currentData = {
-          date: dateId,
-          totalSales: 0, totalProfit: 0,
-          cashSales: 0, cashProfit: 0,
-          paypaySales: 0, paypayProfit: 0,
-          hourly: {},
-        };
-      } else {
-        currentData = summaryDoc.data();
-      }
+    if (orderData.paymentMethod === "cash") {
+      updateData.cashSales = increment(totalSales);
+      updateData.cashProfit = increment(totalProfit);
+      updateData[`hourly.${hour}.cashSales`] = increment(totalSales);
+      updateData[`hourly.${hour}.cashProfit`] = increment(totalProfit);
+    } else if (orderData.paymentMethod === "paypay") {
+      updateData.paypaySales = increment(totalSales);
+      updateData.paypayProfit = increment(totalProfit);
+      updateData[`hourly.${hour}.paypaySales`] = increment(totalSales);
+      updateData[`hourly.${hour}.paypayProfit`] = increment(totalProfit);
+    }
 
-      currentData.totalSales += totalSales;
-      currentData.totalProfit += totalProfit;
+    batch.set(summaryRef, updateData, { merge: true });
 
-      if (!currentData.hourly[hour]) {
-        currentData.hourly[hour] = {sales: 0, profit: 0, cashSales: 0, cashProfit: 0, paypaySales: 0, paypayProfit: 0};
-      }
-      currentData.hourly[hour].sales += totalSales;
-      currentData.hourly[hour].profit += totalProfit;
+    // --- 2. 商品ごとの販売数カウント & 在庫管理処理 (新規追加) ---
+    
+    // 在庫IDごとの減少数を集計するためのマップ
+    const inventoryDecrements = {}; 
 
-      if (orderData.paymentMethod === "cash") {
-        currentData.cashSales += totalSales;
-        currentData.cashProfit += totalProfit;
-        currentData.hourly[hour].cashSales += totalSales;
-        currentData.hourly[hour].cashProfit += totalProfit;
-      } else if (orderData.paymentMethod === "paypay") {
-        currentData.paypaySales += totalSales;
-        currentData.paypayProfit += totalProfit;
-        currentData.hourly[hour].paypaySales += totalSales;
-        currentData.hourly[hour].paypayProfit += totalProfit;
-      }
-      transaction.set(summaryRef, currentData);
-    });
+    if (orderData.items && Array.isArray(orderData.items)) {
+        for (const item of orderData.items) {
+            if (!item.productId) continue;
 
-    logger.info(`Successfully aggregated sales for order: ${snap.id}`, {structuredData: true});
+            const productRef = db.collection('products').doc(item.productId);
+            
+            // A. 販売数のカウントアップ
+            batch.update(productRef, { 
+                salesCount: increment(item.quantity) 
+            });
+
+            // B. 在庫IDの確認 (productドキュメントを読み込む必要があります)
+            const productDoc = await productRef.get();
+            const inventoryId = productDoc.data().inventoryId;
+
+            if (inventoryId) {
+                if (!inventoryDecrements[inventoryId]) {
+                    inventoryDecrements[inventoryId] = 0;
+                }
+                inventoryDecrements[inventoryId] += item.quantity;
+            }
+        }
+    }
+
+    // 集計と販売数更新のバッチをコミット
+    await batch.commit();
+
+    // --- 3. 共有在庫の減算と売り切れ判定 (トランザクションで安全に実行) ---
+    if (Object.keys(inventoryDecrements).length > 0) {
+        await db.runTransaction(async (transaction) => {
+            for (const [invId, quantity] of Object.entries(inventoryDecrements)) {
+                const inventoryRef = db.collection('inventory').doc(invId);
+                const invDoc = await transaction.get(inventoryRef);
+
+                if (!invDoc.exists) continue;
+
+                const currentStock = invDoc.data().currentStock || 0;
+                const newStock = currentStock - quantity;
+
+                // 在庫数を更新
+                transaction.update(inventoryRef, { currentStock: newStock });
+
+                // 在庫が0以下になったら、この在庫IDを持つ全商品を「売り切れ」にする
+                if (newStock <= 0) {
+                    const productsQuery = await db.collection('products').where('inventoryId', '==', invId).get();
+                    productsQuery.forEach(doc => {
+                        transaction.update(doc.ref, { isSoldOut: true });
+                    });
+                    logger.info(`Inventory ${invId} is depleted. Marked related products as sold out.`);
+                }
+            }
+        });
+    }
+
+    logger.info(`Successfully processed order: ${snap.id}`);
 
   } catch (error) {
-    logger.error(`Error aggregating sales for order: ${snap.id}`, error, {structuredData: true});
+    logger.error(`Error processing order: ${snap.id}`, error);
   }
 });

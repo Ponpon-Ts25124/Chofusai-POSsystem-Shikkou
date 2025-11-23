@@ -12,9 +12,57 @@
     <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
     <style>
         html, body { overflow: hidden; }
-        .menu-image { width: 100%; height: 100%; object-fit: scale-down; border-radius: 8px; }
-        .customer-cart-item { display: flex; font-size: 1.5em; margin-bottom: 15px; margin-left: 15px; }
-        .customer-cart-item .name { width: 120px; flex-grow: 1; }
+        
+        /* お品書きエリアのスタイル */
+        .menu-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 20px;
+            padding: 20px;
+            overflow-y: auto;
+            height: flex;
+            box-sizing: border-box;
+        }
+        .menu-item {
+            background: #fff;
+            border-radius: 12px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 15px;
+            text-align: center;
+            position: relative;
+        }
+        .menu-item img {
+            width: 100%;
+            height: 100%;
+            object-fit: scale-down;
+            border-radius: 8px;
+            margin-bottom: 10px;
+        }
+        .menu-item h3 { margin: 0 0 5px 0; font-size: 1.4em; }
+        .menu-item .price { font-size: 1.2em; color: #e63946; font-weight: bold; }
+        
+        /* 売り切れ表示 */
+        .menu-item.sold-out { opacity: 0.6; }
+        .sold-out-badge {
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%) rotate(-15deg);
+            background: rgba(255, 0, 0, 0.8);
+            color: white;
+            font-size: 2em;
+            font-weight: bold;
+            padding: 10px 30px;
+            border-radius: 10px;
+            border: 3px solid white;
+            z-index: 10;
+        }
+
+        /* カート等のスタイル */
+        .customer-cart-item { display: flex; font-size: 1.5em; margin-bottom: 15px; }
+        .customer-cart-item .name { flex-grow: 1; }
         .customer-cart-item .qty { width: 100px; text-align: right; }
         .customer-cart-item .subtotal { width: 150px; text-align: right; font-weight: bold; }
         #qrcode { display: inline-block; margin: 20px 0; background-color: #fff; padding: 15px; border-radius: 8px; }
@@ -23,7 +71,13 @@
 </head>
 <body>
     <div class="container">
-        <div class="left-pane"><img src="images/menu1.png" alt="お品書き" class="menu-image"></div>
+        <!-- 左側: 動的お品書き -->
+        <div class="left-pane" style="background-color: #fff3e0;">
+            <div class="menu-grid" id="menu-grid">
+                <!-- 商品カードがここに生成されます -->
+            </div>
+        </div>
+        <!-- 右側: カート -->
         <div class="right-pane">
             <div class="cart-container">
                 <div class="cart-header">ご注文内容</div>
@@ -36,9 +90,10 @@
             </div>
         </div>
     </div>
+
     <div id="paypay-modal" class="modal">
         <div class="modal-content" style="text-align: center;">
-            <h2>現金以外のお支払い</h2>
+            <h2>PayPayでお支払い</h2>
             <p>合計金額: <strong id="paypay-total">¥0</strong></p>
             <div id="qrcode"></div>
             <p>支払い後、画面を店員にお見せください</p>
@@ -53,6 +108,7 @@
     document.addEventListener('DOMContentLoaded', function() {
         document.body.addEventListener('touchmove', function(event) { event.preventDefault(); }, { passive: false });
         
+        const menuGrid = document.getElementById('menu-grid');
         const cartItemsContainer = document.getElementById('cart-items');
         const totalAmountEl = document.getElementById('total-amount');
         const paypayModal = document.getElementById('paypay-modal');
@@ -62,41 +118,44 @@
 
         let products = [], bundleDeals = [], currentCart = {};
 
-        // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
-        // ★★★ ここからがリアルタイム更新のロジックです ★★★
-        // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
-
-        // 1. 商品リストをリアルタイムで監視
+        // --- データ監視 ---
         db.collection('products').orderBy('sortOrder').onSnapshot(snapshot => {
             products = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            // 商品リストが更新されたら、現在のカート内容で再描画
-            renderCustomerCart(currentCart); 
-        }, error => {
-            console.error("商品リストの監視エラー:", error);
+            renderMenu(); // お品書きを再描画
+            renderCustomerCart(currentCart);
         });
 
-        // 2. 割引ルールをリアルタイムで監視
         db.collection('bundleDeals').where('isActive', '==', true).orderBy('priority', 'desc').onSnapshot(snapshot => {
             bundleDeals = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            // 割引ルールが更新されたら、現在のカート内容で再描画
             renderCustomerCart(currentCart);
-        }, error => {
-            console.error("割引ルールの監視エラー:", error);
         });
 
-        // 3. カートの中身をリアルタイムで監視
         db.collection('currentOrder').doc('main_register').onSnapshot(doc => {
             currentCart = doc.data()?.items || {};
-            // カートの中身が更新されたら再描画
             renderCustomerCart(currentCart);
-        }, error => {
-            console.error("カートの監視エラー:", error);
         });
 
-        // ★★★★★★★★★★★★★★★★★★★★
-        // ★★★ 監視ロジックはここまで ★★★
-        // ★★★★★★★★★★★★★★★★★★★★
+        // --- 動的お品書き描画 ---
+        function renderMenu() {
+            menuGrid.innerHTML = '';
+            products.forEach(product => {
+                const card = document.createElement('div');
+                card.className = `menu-item ${product.isSoldOut ? 'sold-out' : ''}`;
+                
+                const imageUrl = product.imagePath || 'https://via.placeholder.com/150';
+                const soldOutBadge = product.isSoldOut ? '<div class="sold-out-badge">SOLD OUT</div>' : '';
 
+                card.innerHTML = `
+                    ${soldOutBadge}
+                    <img src="${imageUrl}" alt="${product.name}">
+                    <h3>${product.name}</h3>
+                    <div class="price">¥${product.price.toLocaleString()}</div>
+                `;
+                menuGrid.appendChild(card);
+            });
+        }
+
+        // --- 割引計算・カート描画・PayPay ---
         function applyBundleDiscounts(cart) {
             let originalTotal = 0, finalTotal = 0, discountAmount = 0;
             const cartItemsFlat = [];
@@ -132,8 +191,7 @@
         
         function renderCustomerCart(cart) {
             cartItemsContainer.innerHTML = '';
-            if (products.length === 0) return; // 商品データがまだ読み込まれていない場合は何もしない
-
+            if (products.length === 0) return;
             if (Object.keys(cart).length === 0) {
                 cartItemsContainer.innerHTML = '<p style="text-align: center; color: #888; padding: 20px;">ご注文をお待ちしております。</p>';
                 totalAmountEl.textContent = '¥0';
@@ -177,10 +235,7 @@
                 paypayModal.style.display = 'flex';
             } else {
                 paypayModal.style.display = 'none';
-                if (qrcode) {
-                    qrcode.clear();
-                    qrcodeContainer.innerHTML = '';
-                }
+                if (qrcode) { qrcode.clear(); qrcodeContainer.innerHTML = ''; }
             }
         });
     });
