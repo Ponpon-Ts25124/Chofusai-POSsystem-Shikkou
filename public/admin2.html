@@ -3,71 +3,113 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>売上データ</title>
+    <title>売上データ (全期間)</title>
     <link rel="stylesheet" href="style.css">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Chart.js UMD版 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
     <style>
         html, body { overflow: auto !important; }
         .summary-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-bottom: 30px; }
-        .card { background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .card { background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 20px; }
         .card h3 { margin-top: 0; color: #555; }
         .card .amount { font-size: 2em; font-weight: bold; }
         .admin-header { display: flex; justify-content: space-between; align-items: center; padding-bottom: 10px; border-bottom: 2px solid #333; margin-bottom: 20px; }
         .nav-btn { padding: 10px 20px; background-color: #6c757d; color: white; text-decoration: none; border-radius: 5px; }
+        
+        /* グラフエリアの高さを確保 */
+        .chart-container {
+            position: relative;
+            height: 400px;
+            width: 100%;
+            min-height: 400px;
+        }
+
+        /* テーブルのスタイル調整 */
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th, td { padding: 10px; border: 1px solid #ddd; text-align: left; }
+        th { background-color: #f2f2f2; font-weight: bold; }
+        td.num { text-align: right; }
     </style>
 </head>
 <body>
     <div class="admin-container">
         <div class="admin-header">
-            <h2>売上データ分析</h2>
+            <h2>売上データ分析 (全期間合計)</h2>
             <div>
                 <a href="admin.html" class="nav-btn">設定画面へ戻る</a>
                 <button id="logout-btn" style="margin-left: 10px;">ログアウト</button>
             </div>
         </div>
         <div style="padding: 20px;">
-            <!-- 売上分析セクション -->
+            <!-- サマリーカード -->
             <div class="summary-cards">
-                <div class="card"><h3>総売上</h3><div class="amount" id="summary-total-sales">¥0</div></div>
-                <div class="card"><h3>総利益</h3><div class="amount" id="summary-total-profit">¥0</div></div>
+                <div class="card"><h3>総売上 (全期間)</h3><div class="amount" id="summary-total-sales">¥0</div></div>
+                <div class="card"><h3>総利益 (全期間)</h3><div class="amount" id="summary-total-profit">¥0</div></div>
                 <div class="card"><h3>利益率</h3><div class="amount" id="summary-profit-rate">0%</div></div>
             </div>
-            <div class="card" style="margin-bottom: 30px;">
-                <h3>時間帯別 売上</h3>
-                <div style="position: relative; height:400px; width:100%">
+
+            <!-- グラフ表示エリア -->
+            <div class="card">
+                <h3>時間帯別 売上傾向 (全日合計)</h3>
+                <div class="chart-container">
                     <canvas id="sales-chart"></canvas>
                 </div>
             </div>
             
-            <h2>決済方法別 詳細</h2>
-            <table border="1" style="width: 100%; border-collapse: collapse; margin-top: 15px;">
-                <thead>
-                    <tr style="background-color: #f2f2f2;">
-                        <th style="padding: 8px;">決済方法</th>
-                        <th style="padding: 8px;">売上</th>
-                        <th style="padding: 8px;">利益</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td style="padding: 8px;">現金</td>
-                        <td style="padding: 8px; text-align: right;" id="detail-cash-sales">¥0</td>
-                        <td style="padding: 8px; text-align: right;" id="detail-cash-profit">¥0</td>
-                    </tr>
-                    <tr>
-                        <td style="padding: 8px;">PayPay</td>
-                        <td style="padding: 8px; text-align: right;" id="detail-paypay-sales">¥0</td>
-                        <td style="padding: 8px; text-align: right;" id="detail-paypay-profit">¥0</td>
-                    </tr>
-                </tbody>
-                <tfoot>
-                    <tr style="font-weight: bold; background-color: #f2f2f2;">
-                        <td style="padding: 8px;">合計</td>
-                        <td style="padding: 8px; text-align: right;" id="detail-total-sales">¥0</td>
-                        <td style="padding: 8px; text-align: right;" id="detail-total-profit">¥0</td>
-                    </tr>
-                </tfoot>
-            </table>
+            <!-- 2カラムレイアウト -->
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                
+                <!-- 商品別販売数ランキング -->
+                <div class="card">
+                    <h3>商品別 販売数ランキング</h3>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>順位</th>
+                                <th>商品名</th>
+                                <th>販売数</th>
+                                <th>売上概算</th>
+                            </tr>
+                        </thead>
+                        <tbody id="product-ranking-body">
+                            <!-- JSで生成 -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- 決済方法別 詳細 -->
+                <div class="card">
+                    <h3>決済方法別 詳細 (全期間)</h3>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>決済方法</th>
+                                <th>売上</th>
+                                <th>利益</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>現金</td>
+                                <td class="num" id="detail-cash-sales">¥0</td>
+                                <td class="num" id="detail-cash-profit">¥0</td>
+                            </tr>
+                            <tr>
+                                <td>キャッシュレス</td>
+                                <td class="num" id="detail-paypay-sales">¥0</td>
+                                <td class="num" id="detail-paypay-profit">¥0</td>
+                            </tr>
+                        </tbody>
+                        <tfoot>
+                            <tr style="font-weight: bold; background-color: #f8f9fa;">
+                                <td>合計</td>
+                                <td class="num" id="detail-total-sales">¥0</td>
+                                <td class="num" id="detail-total-profit">¥0</td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -83,8 +125,7 @@
 
         auth.onAuthStateChanged(user => {
             if (user) {
-                initializeChart();
-                loadSalesData();
+                loadAllData(); // 全データを読み込む関数に変更
             } else {
                 window.location.href = 'login.html';
             }
@@ -92,63 +133,152 @@
 
         logoutBtn.addEventListener('click', () => { auth.signOut().then(() => { window.location.href = 'login.html'; }); });
 
-        function getTodayDateId() {
-            const now = new Date();
-            const jstOffset = 9 * 60;
-            const jstDate = new Date(now.getTime() + (jstOffset + now.getTimezoneOffset()) * 60000);
-            const yyyy = jstDate.getFullYear();
-            const mm = String(jstDate.getMonth() + 1).padStart(2, "0");
-            const dd = String(jstDate.getDate()).padStart(2, "0");
-            return `${yyyy}-${mm}-${dd}`;
-        }
+        function loadAllData() {
+            // 1. 商品データの監視 (販売数ランキング用)
+            db.collection('products').orderBy('salesCount', 'desc').onSnapshot(snapshot => {
+                const products = snapshot.docs.map(doc => doc.data());
+                updateProductRanking(products);
+            });
 
-        function initializeChart() {
-            const ctx = document.getElementById('sales-chart').getContext('2d');
-            salesChartInstance = new Chart(ctx, {
-                type: 'bar',
-                data: {
-                    labels: [],
-                    datasets: [
-                        { label: '現金 売上', data: [], backgroundColor: 'rgba(54, 162, 235, 0.6)', borderColor: 'rgba(54, 162, 235, 1)', borderWidth: 1 },
-                        { label: 'PayPay 売上', data: [], backgroundColor: 'rgba(255, 99, 132, 0.6)', borderColor: 'rgba(255, 99, 132, 1)', borderWidth: 1 }
-                    ]
-                },
-                options: { scales: { x: { stacked: true }, y: { stacked: true, beginAtZero: true } }, responsive: true, maintainAspectRatio: false, animation: { duration: 500 } }
+            // 2. 売上集計データの監視 (全ドキュメントを取得)
+            db.collection("salesSummaries").onSnapshot(snapshot => {
+                let aggregatedData = {
+                    totalSales: 0, totalProfit: 0,
+                    cashSales: 0, cashProfit: 0,
+                    paypaySales: 0, paypayProfit: 0,
+                    hourly: {}
+                };
+
+                snapshot.forEach(doc => {
+                    const data = doc.data();
+                    
+                    // 単純な足し算
+                    aggregatedData.totalSales += (data.totalSales || 0);
+                    aggregatedData.totalProfit += (data.totalProfit || 0);
+                    aggregatedData.cashSales += (data.cashSales || 0);
+                    aggregatedData.cashProfit += (data.cashProfit || 0);
+                    aggregatedData.paypaySales += (data.paypaySales || 0);
+                    aggregatedData.paypayProfit += (data.paypayProfit || 0);
+
+                    // 時間帯別データの統合 (フラットキー対応)
+                    // 'hourly' オブジェクトがある場合
+                    if (data.hourly) {
+                        Object.keys(data.hourly).forEach(hour => {
+                            const hData = data.hourly[hour];
+                            if (!aggregatedData.hourly[hour]) aggregatedData.hourly[hour] = { cashSales: 0, paypaySales: 0 };
+                            aggregatedData.hourly[hour].cashSales += (hData.cashSales || 0);
+                            aggregatedData.hourly[hour].paypaySales += (hData.paypaySales || 0);
+                        });
+                    }
+                    
+                    // フラットキー (hourly.10.sales など) の場合
+                    Object.keys(data).forEach(key => {
+                        if (key.startsWith('hourly.')) {
+                            const parts = key.split('.'); // ["hourly", "10", "sales"]
+                            if (parts.length === 3) {
+                                const hour = parts[1];
+                                const type = parts[2]; // "cashSales" などを探す
+                                
+                                if (!aggregatedData.hourly[hour]) aggregatedData.hourly[hour] = { cashSales: 0, paypaySales: 0 };
+                                
+                                if (type === 'cashSales') aggregatedData.hourly[hour].cashSales += data[key];
+                                if (type === 'paypaySales') aggregatedData.hourly[hour].paypaySales += data[key];
+                            }
+                        }
+                    });
+                });
+
+                updateDashboard(aggregatedData);
             });
         }
 
-        function loadSalesData() {
-            const todayId = getTodayDateId();
-            const summaryRef = db.collection("salesSummaries").doc(todayId);
-            summaryRef.onSnapshot(doc => {
-                const data = doc.exists ? doc.data() : {};
-                updateDashboard(data);
+        // 商品ランキングの描画
+        function updateProductRanking(products) {
+            const tbody = document.getElementById('product-ranking-body');
+            tbody.innerHTML = '';
+            
+            products.forEach((product, index) => {
+                const salesCount = product.salesCount || 0;
+                // 売上概算 = 単価 × 販売数 (割引は考慮されない簡易計算)
+                const estimatedSales = product.price * salesCount;
+                
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td style="text-align:center;">${index + 1}</td>
+                    <td>${product.name}</td>
+                    <td class="num"><strong>${salesCount}</strong> 点</td>
+                    <td class="num">¥${estimatedSales.toLocaleString()}</td>
+                `;
+                tbody.appendChild(tr);
             });
         }
         
         function updateDashboard(data) {
-            const totalSales = data.totalSales || 0; const totalProfit = data.totalProfit || 0; const cashSales = data.cashSales || 0; const cashProfit = data.cashProfit || 0; const paypaySales = data.paypaySales || 0; const paypayProfit = data.paypayProfit || 0; const profitRate = totalSales > 0 ? ((totalProfit / totalSales) * 100).toFixed(1) : 0;
-            document.getElementById('summary-total-sales').textContent = `¥${totalSales.toLocaleString()}`;
-            document.getElementById('summary-total-profit').textContent = `¥${totalProfit.toLocaleString()}`;
-            document.getElementById('summary-profit-rate').textContent = `${profitRate}%`;
-            document.getElementById('detail-cash-sales').textContent = `¥${cashSales.toLocaleString()}`;
-            document.getElementById('detail-cash-profit').textContent = `¥${cashProfit.toLocaleString()}`;
-            document.getElementById('detail-paypay-sales').textContent = `¥${paypaySales.toLocaleString()}`;
-            document.getElementById('detail-paypay-profit').textContent = `¥${paypayProfit.toLocaleString()}`;
-            document.getElementById('detail-total-sales').textContent = `¥${totalSales.toLocaleString()}`;
-            document.getElementById('detail-total-profit').textContent = `¥${totalProfit.toLocaleString()}`;
+            const profitRate = data.totalSales > 0 ? ((data.totalProfit / data.totalSales) * 100).toFixed(1) : 0;
             
+            document.getElementById('summary-total-sales').textContent = `¥${data.totalSales.toLocaleString()}`;
+            document.getElementById('summary-total-profit').textContent = `¥${data.totalProfit.toLocaleString()}`;
+            document.getElementById('summary-profit-rate').textContent = `${profitRate}%`;
+            
+            document.getElementById('detail-cash-sales').textContent = `¥${data.cashSales.toLocaleString()}`;
+            document.getElementById('detail-cash-profit').textContent = `¥${data.cashProfit.toLocaleString()}`;
+            document.getElementById('detail-paypay-sales').textContent = `¥${data.paypaySales.toLocaleString()}`;
+            document.getElementById('detail-paypay-profit').textContent = `¥${data.paypayProfit.toLocaleString()}`;
+            document.getElementById('detail-total-sales').textContent = `¥${data.totalSales.toLocaleString()}`;
+            document.getElementById('detail-total-profit').textContent = `¥${data.totalProfit.toLocaleString()}`;
+            
+            drawChart(data.hourly);
+        }
+
+        function drawChart(hourlyData) {
+            const canvas = document.getElementById('sales-chart');
+            if (!canvas) return;
+
             if (salesChartInstance) {
-                const hourlyData = data.hourly || {};
-                const sortedHours = Object.keys(hourlyData).sort();
-                const labels = sortedHours.map(hour => `${hour}時`);
-                const cashSalesData = sortedHours.map(hour => hourlyData[hour].cashSales || 0);
-                const paypaySalesData = sortedHours.map(hour => hourlyData[hour].paypaySales || 0);
-                salesChartInstance.data.labels = labels;
-                salesChartInstance.data.datasets[0].data = cashSalesData;
-                salesChartInstance.data.datasets[1].data = paypaySalesData;
-                salesChartInstance.update();
+                salesChartInstance.destroy();
             }
+
+            const sortedHours = Object.keys(hourlyData).sort((a, b) => Number(a) - Number(b));
+            
+            const labels = sortedHours.length > 0 ? sortedHours.map(hour => `${hour}時`) : ['データなし'];
+            const cashSalesData = sortedHours.length > 0 ? sortedHours.map(hour => hourlyData[hour].cashSales || 0) : [0];
+            const paypaySalesData = sortedHours.length > 0 ? sortedHours.map(hour => hourlyData[hour].paypaySales || 0) : [0];
+
+            const ctx = canvas.getContext('2d');
+            salesChartInstance = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: '現金 売上',
+                            data: cashSalesData,
+                            backgroundColor: 'rgba(54, 162, 235, 0.6)',
+                            borderColor: 'rgba(54, 162, 235, 1)',
+                            borderWidth: 1
+                        },
+                        {
+                            label: 'キャッシュレス 売上',
+                            data: paypaySalesData,
+                            backgroundColor: 'rgba(255, 99, 132, 0.6)',
+                            borderColor: 'rgba(255, 99, 132, 1)',
+                            borderWidth: 1
+                        }
+                    ]
+                },
+                options: {
+                    scales: {
+                        x: { stacked: true },
+                        y: { stacked: true, beginAtZero: true }
+                    },
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'top' },
+                        title: { display: true, text: '時間帯別 売上推移 (全日合計)' }
+                    }
+                }
+            });
         }
     });
     </script>
